@@ -54,9 +54,11 @@ namespace Renderer
         VkResult checkGflwRequiredInstanceExtensions(const std::vector<const char*>& requiredExtensions);
         VkResult createInstance();
         VkResult setupDebugMessenger();
-        VkResult createSurface(GLFWwindow* window);
+        VkResult createSurface();
         VkResult pickPhysicalDevice();
         VkResult createLogicalDevice();
+        VkResult createSwapChain();
+        VkResult createImageViews();
         
         void populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo);
         int rateDeviceSuitability(VkPhysicalDevice device);
@@ -64,6 +66,11 @@ namespace Renderer
         bool isDeviceSuitable(VkPhysicalDevice device);
         bool checkDeviceExtensionSupport(VkPhysicalDevice device);
         SwapChainSupportDetails querySwapChainSupport(VkPhysicalDevice device);
+        VkSurfaceFormatKHR chooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats);
+        VkPresentModeKHR chooseSwapPresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes);
+        VkExtent2D chooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities);
+
+        GLFWwindow* m_window = nullptr;
 
         VkInstance m_instance                     = VK_NULL_HANDLE;
         VkDebugUtilsMessengerEXT m_debugMessenger = VK_NULL_HANDLE;
@@ -72,6 +79,12 @@ namespace Renderer
         VkSurfaceKHR m_surface                    = VK_NULL_HANDLE;
         VkQueue m_graphicsQueue                   = VK_NULL_HANDLE;
         VkQueue m_presentQueue                    = VK_NULL_HANDLE;
+        VkSwapchainKHR m_swapChain                = VK_NULL_HANDLE;
+
+        std::vector<VkImage> m_swapChainImages;
+        std::vector<VkImageView> m_swapChainImageViews;
+        VkFormat swapChainImageFormat;
+        VkExtent2D swapChainExtent;
 
         const std::vector<const char*> m_validationLayers = { "VK_LAYER_KHRONOS_validation" };
         const std::vector<const char*> m_deviceExtensions = { VK_KHR_SWAPCHAIN_EXTENSION_NAME };
