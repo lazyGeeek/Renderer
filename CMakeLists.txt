@@ -3,6 +3,35 @@ set(RENDERER_PROJECT "Renderer")
 find_package(Vulkan REQUIRED)
 
 file(
+    GLOB_RECURSE RENDERER_BINS_LIST
+    "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/bins/*.*"
+)
+
+file(
+    GLOB_RECURSE RENDERER_LIBS_LIST
+    "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/libs/*.*"
+)
+
+foreach (BIN_FILE ${RENDERER_BINS_LIST})
+    file(COPY ${BIN_FILE} DESTINATION ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
+endforeach ()
+
+foreach (LIB_FILE ${RENDERER_LIBS_LIST})
+    file(COPY ${LIB_FILE} DESTINATION ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
+endforeach ()
+
+execute_process(COMMAND python3 "${CMAKE_CURRENT_SOURCE_DIR}/shaders/build_shaders.py")
+
+file(
+    GLOB_RECURSE RENDERER_SHADERS_LIST
+    "${CMAKE_CURRENT_SOURCE_DIR}/shaders/*.spv"
+)
+
+foreach (SHADER_FILE ${RENDERER_SHADERS_LIST})
+    file(COPY ${SHADER_FILE} DESTINATION "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/Shaders")
+endforeach ()
+
+file(
     GLOB_RECURSE RENDERER_CODE_LIST
     LIST_DIRECTORIES false
     "${CMAKE_CURRENT_SOURCE_DIR}/src/*.c*"
@@ -16,11 +45,9 @@ target_compile_features(${RENDERER_PROJECT} PRIVATE cxx_std_20)
 target_include_directories(${RENDERER_PROJECT} PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/include
     ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/include
-    ${CMAKE_SOURCE_DIR}/Window/include
-    ${CMAKE_SOURCE_DIR}/Window/thirdparty/include
     ${Vulkan_INCLUDE_DIRS}
 )
-target_link_libraries(${RENDERER_PROJECT} PRIVATE ${Vulkan_LIBRARIES} Window)
+target_link_libraries(${RENDERER_PROJECT} PRIVATE ${RENDERER_BINS_LIST} ${Vulkan_LIBRARIES})
 
 foreach(RENDERER_FILE IN ITEMS ${RENDERER_CODE_LIST})
     get_filename_component(RENDERER_FILE_PATH "${RENDERER_FILE}" PATH)
