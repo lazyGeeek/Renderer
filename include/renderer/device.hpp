@@ -10,6 +10,7 @@
 #include <GLFW/glfw3.h>
 
 #include <format>
+#include <optional>
 
 namespace Renderer
 {
@@ -31,11 +32,10 @@ namespace Renderer
         std::vector<VkPresentModeKHR> presentModes;
     };
 
-
     class Device
     {
     public:
-        Device(GLFWwindow* window);
+        Device(GLFWwindow* window, const std::filesystem::path& shaderPath);
         ~Device();
 
         Device(const Device& other)             = delete;
@@ -43,6 +43,9 @@ namespace Renderer
         Device& operator=(const Device& other)  = delete;
         Device& operator=(const Device&& other) = delete;
         
+        void DrawFrame();
+        void SetFramebufferResized();
+
     private:
         inline void throwIfFailed(VkResult rs, const char* message)
         {
@@ -59,7 +62,16 @@ namespace Renderer
         VkResult createLogicalDevice();
         VkResult createSwapChain();
         VkResult createImageViews();
+        VkResult createRenderPass();
+        VkResult createGraphicsPipeline(const std::filesystem::path& shaderPath);
+        VkResult createFramebuffers();
+        VkResult createCommandPool();
+        VkResult createCommandBuffers();
+        VkResult recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex);
+        VkResult createSyncObjects();
         
+        void cleanupSwapChain();
+        void recreateSwapChain();
         void populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo);
         int rateDeviceSuitability(VkPhysicalDevice device);
         QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device);
@@ -69,6 +81,7 @@ namespace Renderer
         VkSurfaceFormatKHR chooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats);
         VkPresentModeKHR chooseSwapPresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes);
         VkExtent2D chooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities);
+        VkShaderModule createShaderModule(const std::vector<char>& code);
 
         GLFWwindow* m_window = nullptr;
 
@@ -80,11 +93,26 @@ namespace Renderer
         VkQueue m_graphicsQueue                   = VK_NULL_HANDLE;
         VkQueue m_presentQueue                    = VK_NULL_HANDLE;
         VkSwapchainKHR m_swapChain                = VK_NULL_HANDLE;
+        VkRenderPass m_renderPass                 = VK_NULL_HANDLE;
+        VkPipeline m_graphicsPipeline             = VK_NULL_HANDLE;
+        VkPipelineLayout m_pipelineLayout         = VK_NULL_HANDLE;
+        VkCommandPool m_commandPool               = VK_NULL_HANDLE;
+        
+        std::vector<VkCommandBuffer> m_commandBuffers;
+        std::vector<VkSemaphore> m_imageAvailableSemaphores;
+        std::vector<VkSemaphore> m_renderFinishedSemaphores;
+        std::vector<VkFence> m_inFlightFences;
 
         std::vector<VkImage> m_swapChainImages;
         std::vector<VkImageView> m_swapChainImageViews;
-        VkFormat swapChainImageFormat;
-        VkExtent2D swapChainExtent;
+        std::vector<VkFramebuffer> m_swapChainFramebuffers;
+        VkFormat m_swapChainImageFormat;
+        VkExtent2D m_swapChainExtent;
+
+        bool m_framebufferResized = false;
+        uint32_t m_currentFrame = 0;
+
+        const uint32_t MAX_FRAMES_IN_FLIGHT = 2;
 
         const std::vector<const char*> m_validationLayers = { "VK_LAYER_KHRONOS_validation" };
         const std::vector<const char*> m_deviceExtensions = { VK_KHR_SWAPCHAIN_EXTENSION_NAME };

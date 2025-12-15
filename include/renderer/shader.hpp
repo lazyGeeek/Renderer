@@ -10,7 +10,7 @@ namespace Renderer
     class Shader
     {
     public:
-        Shader() = default;
+        Shader()  = default;
         ~Shader() = default;
 
         std::vector<char> ReadFile(const std::filesystem::path& file);
