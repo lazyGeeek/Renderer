@@ -724,42 +724,8 @@ namespace Renderer
         return vkCreateRenderPass(m_device, &renderPassInfo, nullptr, &m_renderPass);
     }
 
-    VkShaderModule Device::createShaderModule(const std::vector<char>& code)
-    {
-        VkShaderModuleCreateInfo createInfo { };
-        createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-        createInfo.codeSize = code.size();
-        createInfo.pCode = reinterpret_cast<const uint32_t*>(code.data());
-
-        VkShaderModule shaderModule;
-        throwIfFailed(vkCreateShaderModule(m_device, &createInfo, nullptr, &shaderModule), "Failed to create shader module");
-
-        return shaderModule;
-    }
-
     VkResult Device::createGraphicsPipeline(const std::filesystem::path& shaderPath)
     {
-        Shader shader;
-        std::vector<char> vertShaderCode = std::move(shader.ReadFile(shaderPath / "triangle_vert.spv"));
-        std::vector<char> fragShaderCode = std::move(shader.ReadFile(shaderPath / "triangle_frag.spv"));
-
-        VkShaderModule vertShaderModule = createShaderModule(vertShaderCode);
-        VkShaderModule fragShaderModule = createShaderModule(fragShaderCode);
-
-        VkPipelineShaderStageCreateInfo vertShaderStageInfo { };
-        vertShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-        vertShaderStageInfo.stage = VK_SHADER_STAGE_VERTEX_BIT;
-        vertShaderStageInfo.module = vertShaderModule;
-        vertShaderStageInfo.pName = "main";
-
-        VkPipelineShaderStageCreateInfo fragShaderStageInfo { };
-        fragShaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-        fragShaderStageInfo.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
-        fragShaderStageInfo.module = fragShaderModule;
-        fragShaderStageInfo.pName = "main";
-
-        VkPipelineShaderStageCreateInfo shaderStages[] = { vertShaderStageInfo, fragShaderStageInfo };
-
         VkPipelineVertexInputStateCreateInfo vertexInputInfo { };
         vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
         vertexInputInfo.vertexBindingDescriptionCount = 0;
@@ -843,6 +809,24 @@ namespace Renderer
         if (result != VK_SUCCESS)
             return result;
 
+        ShaderInfo shaderInfo
+        {
+            .FilePath = shaderPath / "triangle_vert.spv",
+            .Type = EShaderType::Vertex
+        };
+
+        Shader vertexShader(m_device, shaderInfo);
+
+        shaderInfo.FilePath = shaderPath / "triangle_frag.spv";
+        shaderInfo.Type = EShaderType::Fragment;
+
+        Shader fragmentShader(m_device, shaderInfo);
+
+        VkPipelineShaderStageCreateInfo vertShaderStageInfo = std::move(vertexShader.GenerateStageInfo());
+        VkPipelineShaderStageCreateInfo fragShaderStageInfo = std::move(fragmentShader.GenerateStageInfo());
+
+        VkPipelineShaderStageCreateInfo shaderStages[] = { vertShaderStageInfo, fragShaderStageInfo };
+
         VkGraphicsPipelineCreateInfo pipelineInfo { };
         pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
         pipelineInfo.stageCount = 2;
@@ -862,9 +846,6 @@ namespace Renderer
         result = vkCreateGraphicsPipelines(m_device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &m_graphicsPipeline);
         if (result != VK_SUCCESS)
             return result;
-
-        vkDestroyShaderModule(m_device, vertShaderModule, nullptr);
-        vkDestroyShaderModule(m_device, fragShaderModule, nullptr);
 
         return result;
     }

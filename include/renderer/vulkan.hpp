@@ -21,10 +21,10 @@ namespace Renderer
         Vulkan& operator=(const Vulkan& other)  = delete;
         Vulkan& operator=(const Vulkan&& other) = delete;
 
-        void AddShader(std::string name, const std::filesystem::path& file);
+    //     void AddShader(std::string name, const std::filesystem::path& file);
 
-    private:
-        std::map<std::string, std::unique_ptr<Shader>> m_shaders;
+    // private:
+    //     std::map<std::string, std::unique_ptr<Shader>> m_shaders;
     };
 }
 

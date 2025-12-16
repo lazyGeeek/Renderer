@@ -2,13 +2,14 @@
 #ifndef RENDERER_DEVICE_HPP_
 #define RENDERER_DEVICE_HPP_
 
-#include "renderer/shader.hpp"
+// #include "renderer/shader.hpp"
 
 #include <vulkan/vulkan.hpp>
 
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 
+#include <filesystem>
 #include <format>
 #include <optional>
 
@@ -81,7 +82,6 @@ namespace Renderer
         VkSurfaceFormatKHR chooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats);
         VkPresentModeKHR chooseSwapPresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes);
         VkExtent2D chooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities);
-        VkShaderModule createShaderModule(const std::vector<char>& code);
 
         GLFWwindow* m_window = nullptr;
 
