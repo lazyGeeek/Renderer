@@ -2,11 +2,6 @@
 #ifndef RENDERER_VULKAN_HPP_
 #define RENDERER_VULKAN_HPP_
 
-// #include "renderer/shader.hpp"
-// #include "renderer/sync_object.hpp"
-
-// #include "renderer/vulkan_types.hpp"
-
 #include <vulkan/vulkan.hpp>
 
 #define GLFW_INCLUDE_VULKAN
@@ -19,6 +14,7 @@
 namespace Renderer
 {
     class Device;
+    class SyncObject;
 
     class Vulkan
     {
@@ -60,7 +56,6 @@ namespace Renderer
         VkResult createCommandPool();
         VkResult createCommandBuffers();
         VkResult recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex);
-        VkResult createSyncObjects();
         
         void cleanupSwapChain();
         void recreateSwapChain();
@@ -83,9 +78,7 @@ namespace Renderer
         VkCommandPool m_commandPool               = VK_NULL_HANDLE;
         
         std::vector<VkCommandBuffer> m_commandBuffers;
-        std::vector<VkSemaphore> m_imageAvailableSemaphores;
-        std::vector<VkSemaphore> m_renderFinishedSemaphores;
-        std::vector<VkFence> m_inFlightFences;
+        std::vector<std::unique_ptr<SyncObject>> m_syncObjects;
 
         std::vector<VkImage> m_swapChainImages;
         std::vector<VkImageView> m_swapChainImageViews;
