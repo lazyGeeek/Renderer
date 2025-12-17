@@ -1,4 +1,6 @@
 #include "renderer/vulkan.hpp"
+#include "renderer/command_buffers.hpp"
+#include "renderer/command_pool.hpp"
 #include "renderer/device.hpp"
 #include "renderer/shader.hpp"
 #include "renderer/sync_object.hpp"
@@ -56,8 +58,12 @@ namespace Renderer
         throwIfFailed(createRenderPass(), "Failed to create render pass");
         throwIfFailed(createGraphicsPipeline(shaderPath), "Failed to create graphics pipeline");
         throwIfFailed(createFramebuffers(), "Failed to create framebuffers");
-        throwIfFailed(createCommandPool(), "Failed to create command pool");
-        throwIfFailed(createCommandBuffers(), "Failed to create command buffer");
+
+        m_commandPool = std::make_unique<CommandPool>(*m_device.get());
+        m_commandPool->Create();
+
+        m_commandBuffers = std::make_unique<CommandBuffers>(*m_device.get());
+        m_commandBuffers->Create(m_commandPool->Get(), MAX_FRAMES_IN_FLIGHT);
 
         m_syncObjects.clear();
         for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i)
@@ -90,8 +96,8 @@ namespace Renderer
             m_syncObjects[i] = nullptr;
         }
 
-        if (m_commandPool != VK_NULL_HANDLE)
-            vkDestroyCommandPool(device, m_commandPool, nullptr);
+        m_commandPool->Destroy();
+        m_commandPool = nullptr;
             
         m_device->Destroy();
         m_device = nullptr;
@@ -110,7 +116,6 @@ namespace Renderer
 
     void Vulkan::DrawFrame()
     {
-        
         m_syncObjects[m_currentFrame]->WaitForFence();
         
         uint32_t imageIndex = 0;
@@ -128,8 +133,19 @@ namespace Renderer
         
         m_syncObjects[m_currentFrame]->ResetFence();
 
-        vkResetCommandBuffer(m_commandBuffers[m_currentFrame], 0);
-        recordCommandBuffer(m_commandBuffers[m_currentFrame], imageIndex);
+        // vkResetCommandBuffer(m_commandBuffers[m_currentFrame], 0);
+        // recordCommandBuffer(m_commandBuffers[m_currentFrame], imageIndex);
+        m_commandBuffers->Reset(m_currentFrame);
+
+        CommandBufferRecordInfo recordInfo
+        {
+            .FrameBuffer = m_swapChainFramebuffers[imageIndex],
+            .GraphicsPipeline = m_graphicsPipeline,
+            .RenderPass = m_renderPass,
+            .SwapChainExtent = m_swapChainExtent
+        };
+
+        m_commandBuffers->Record(m_currentFrame, recordInfo);
 
         VkSubmitInfo submitInfo { };
         submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
@@ -141,7 +157,8 @@ namespace Renderer
         submitInfo.pWaitDstStageMask = waitStages;
 
         submitInfo.commandBufferCount = 1;
-        submitInfo.pCommandBuffers = &m_commandBuffers[m_currentFrame];
+        // submitInfo.pCommandBuffers = &m_commandBuffers[m_currentFrame];
+        submitInfo.pCommandBuffers = &m_commandBuffers->Get(m_currentFrame);
 
         VkSemaphore signalSemaphores[] = { m_syncObjects[m_currentFrame]->GetRenderFinishedSemaphore() };
         submitInfo.signalSemaphoreCount = 1;
@@ -712,73 +729,61 @@ namespace Renderer
         return result;
     }
 
-    VkResult Vulkan::createCommandPool()
-    {
-        QueueFamilyIndices queueFamilyIndices = m_device->FindQueueFamilies();
+    // VkResult Vulkan::createCommandBuffers()
+    // {
+    //     m_commandBuffers.resize(MAX_FRAMES_IN_FLIGHT);
 
-        VkCommandPoolCreateInfo poolInfo { };
-        poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-        poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-        poolInfo.queueFamilyIndex = queueFamilyIndices.GraphicsFamily.value();
+    //     VkCommandBufferAllocateInfo allocInfo { };
+    //     allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    //     allocInfo.commandPool = m_commandPool->Get();
+    //     allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    //     allocInfo.commandBufferCount = static_cast<uint32_t>(m_commandBuffers.size());
 
-        return vkCreateCommandPool(m_device->GetLogicalDevice(), &poolInfo, nullptr, &m_commandPool);
-    }
+    //     return vkAllocateCommandBuffers(m_device->GetLogicalDevice(), &allocInfo, m_commandBuffers.data());
+    // }
 
-    VkResult Vulkan::createCommandBuffers()
-    {
-        m_commandBuffers.resize(MAX_FRAMES_IN_FLIGHT);
+    // VkResult Vulkan::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex)
+    // {
+    //     VkCommandBufferBeginInfo beginInfo { };
+    //     beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    //     beginInfo.flags = 0; // Optional
+    //     beginInfo.pInheritanceInfo = nullptr; // Optional
 
-        VkCommandBufferAllocateInfo allocInfo { };
-        allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-        allocInfo.commandPool = m_commandPool;
-        allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-        allocInfo.commandBufferCount = static_cast<uint32_t>(m_commandBuffers.size());
+    //     VkResult result = vkBeginCommandBuffer(commandBuffer, &beginInfo);
+    //     if (result != VK_SUCCESS)
+    //         return result;
 
-        return vkAllocateCommandBuffers(m_device->GetLogicalDevice(), &allocInfo, m_commandBuffers.data());
-    }
+    //     VkRenderPassBeginInfo renderPassInfo { };
+    //     renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+    //     renderPassInfo.renderPass = m_renderPass;
+    //     renderPassInfo.framebuffer = m_swapChainFramebuffers[imageIndex];
+    //     renderPassInfo.renderArea.offset = {0, 0};
+    //     renderPassInfo.renderArea.extent = m_swapChainExtent;
 
-    VkResult Vulkan::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex)
-    {
-        VkCommandBufferBeginInfo beginInfo { };
-        beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-        beginInfo.flags = 0; // Optional
-        beginInfo.pInheritanceInfo = nullptr; // Optional
+    //     VkClearValue clearColor = {{{0.0f, 0.0f, 0.0f, 1.0f}}};
+    //     renderPassInfo.clearValueCount = 1;
+    //     renderPassInfo.pClearValues = &clearColor;
 
-        VkResult result = vkBeginCommandBuffer(commandBuffer, &beginInfo);
-        if (result != VK_SUCCESS)
-            return result;
+    //     vkCmdBeginRenderPass(commandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+    //     vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_graphicsPipeline);
 
-        VkRenderPassBeginInfo renderPassInfo { };
-        renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-        renderPassInfo.renderPass = m_renderPass;
-        renderPassInfo.framebuffer = m_swapChainFramebuffers[imageIndex];
-        renderPassInfo.renderArea.offset = {0, 0};
-        renderPassInfo.renderArea.extent = m_swapChainExtent;
+    //     VkViewport viewport { };
+    //     viewport.x = 0.0f;
+    //     viewport.y = 0.0f;
+    //     viewport.width = static_cast<float>(m_swapChainExtent.width);
+    //     viewport.height = static_cast<float>(m_swapChainExtent.height);
+    //     viewport.minDepth = 0.0f;
+    //     viewport.maxDepth = 1.0f;
+    //     vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
 
-        VkClearValue clearColor = {{{0.0f, 0.0f, 0.0f, 1.0f}}};
-        renderPassInfo.clearValueCount = 1;
-        renderPassInfo.pClearValues = &clearColor;
+    //     VkRect2D scissor { };
+    //     scissor.offset = { 0, 0 };
+    //     scissor.extent = m_swapChainExtent;
+    //     vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 
-        vkCmdBeginRenderPass(commandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
-        vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_graphicsPipeline);
+    //     vkCmdDraw(commandBuffer, 3, 1, 0, 0);
+    //     vkCmdEndRenderPass(commandBuffer);
 
-        VkViewport viewport { };
-        viewport.x = 0.0f;
-        viewport.y = 0.0f;
-        viewport.width = static_cast<float>(m_swapChainExtent.width);
-        viewport.height = static_cast<float>(m_swapChainExtent.height);
-        viewport.minDepth = 0.0f;
-        viewport.maxDepth = 1.0f;
-        vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
-
-        VkRect2D scissor { };
-        scissor.offset = { 0, 0 };
-        scissor.extent = m_swapChainExtent;
-        vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
-
-        vkCmdDraw(commandBuffer, 3, 1, 0, 0);
-        vkCmdEndRenderPass(commandBuffer);
-
-        return vkEndCommandBuffer(commandBuffer);
-    }
+    //     return vkEndCommandBuffer(commandBuffer);
+    // }
 }

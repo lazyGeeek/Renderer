@@ -14,6 +14,8 @@
 namespace Renderer
 {
     class Device;
+    class CommandBuffers;
+    class CommandPool;
     class SyncObject;
 
     class Vulkan
@@ -53,9 +55,8 @@ namespace Renderer
         VkResult createRenderPass();
         VkResult createGraphicsPipeline(const std::filesystem::path& shaderPath);
         VkResult createFramebuffers();
-        VkResult createCommandPool();
-        VkResult createCommandBuffers();
-        VkResult recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex);
+        // VkResult createCommandBuffers();
+        // VkResult recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex);
         
         void cleanupSwapChain();
         void recreateSwapChain();
@@ -67,6 +68,7 @@ namespace Renderer
         GLFWwindow* m_window = nullptr;
 
         std::unique_ptr<Device> m_device = nullptr;
+        std::unique_ptr<CommandPool> m_commandPool = nullptr;
 
         VkInstance m_instance                     = VK_NULL_HANDLE;
         VkDebugUtilsMessengerEXT m_debugMessenger = VK_NULL_HANDLE;
@@ -75,9 +77,10 @@ namespace Renderer
         VkRenderPass m_renderPass                 = VK_NULL_HANDLE;
         VkPipeline m_graphicsPipeline             = VK_NULL_HANDLE;
         VkPipelineLayout m_pipelineLayout         = VK_NULL_HANDLE;
-        VkCommandPool m_commandPool               = VK_NULL_HANDLE;
         
-        std::vector<VkCommandBuffer> m_commandBuffers;
+        // std::vector<VkCommandBuffer> m_commandBuffers;
+
+        std::unique_ptr<CommandBuffers> m_commandBuffers;
         std::vector<std::unique_ptr<SyncObject>> m_syncObjects;
 
         std::vector<VkImage> m_swapChainImages;

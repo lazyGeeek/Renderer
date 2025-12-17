@@ -50,8 +50,8 @@ namespace Renderer
         const VkQueue& GetGraphicsQueue() const;
         const VkQueue& GetPresentQueue() const;
     
-        QueueFamilyIndices FindQueueFamilies();
-        SwapChainSupportDetails QuerySwapChainSupport();
+        QueueFamilyIndices FindQueueFamilies() const ;
+        SwapChainSupportDetails QuerySwapChainSupport() const;
 
     private:
         VkResult pickPhysicalDevice();

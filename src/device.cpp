@@ -58,7 +58,7 @@ namespace Renderer
         return m_presentQueue;
     }
 
-    QueueFamilyIndices Device::FindQueueFamilies()
+    QueueFamilyIndices Device::FindQueueFamilies() const
     {
         QueueFamilyIndices indices;
 
@@ -90,7 +90,7 @@ namespace Renderer
         return indices;
     }
 
-    SwapChainSupportDetails Device::QuerySwapChainSupport()
+    SwapChainSupportDetails Device::QuerySwapChainSupport() const
     {
         SwapChainSupportDetails details { };
 
