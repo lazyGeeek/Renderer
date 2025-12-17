@@ -24,7 +24,7 @@ namespace Renderer
     class ShaderConstructor
     {
     public:
-        VkShaderModule CreateShaderModule(VkDevice& device, const std::filesystem::path& shaderFile);        
+        VkShaderModule CreateShaderModule(const VkDevice& device, const std::filesystem::path& shaderFile);        
     
     private:
         std::vector<char> readFile(const std::filesystem::path& shaderFile);
@@ -33,7 +33,7 @@ namespace Renderer
     class Shader
     {
     public:
-        Shader(VkDevice& device, const ShaderInfo& shaderInfo);
+        Shader(const VkDevice& device, const ShaderInfo& shaderInfo);
         ~Shader();
 
         Shader(const Shader& other)             = delete;
@@ -45,7 +45,8 @@ namespace Renderer
         VkPipelineShaderStageCreateInfo GenerateStageInfo() const;
 
     private:
-        VkDevice& m_device;
+        const VkDevice& m_device;
+        
         VkShaderModule m_module = VK_NULL_HANDLE;
         ShaderInfo m_shaderInfo;
     };

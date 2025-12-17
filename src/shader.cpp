@@ -25,7 +25,7 @@ namespace Renderer
         return buffer;
     }
 
-    VkShaderModule ShaderConstructor::CreateShaderModule(VkDevice& device, const std::filesystem::path& shaderPath)
+    VkShaderModule ShaderConstructor::CreateShaderModule(const VkDevice& device, const std::filesystem::path& shaderPath)
     {
         std::vector<char> shaderCode = std::move(readFile(shaderPath));
 
@@ -41,7 +41,7 @@ namespace Renderer
         return shaderModule;
     }
 
-    Shader::Shader(VkDevice& device, const ShaderInfo& shaderInfo) : 
+    Shader::Shader(const VkDevice& device, const ShaderInfo& shaderInfo) : 
         m_device { device },
         m_shaderInfo { shaderInfo }
     {
