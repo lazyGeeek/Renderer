@@ -17,6 +17,7 @@ namespace Renderer
     class CommandBuffers;
     class CommandPool;
     class SyncObject;
+    class SwapChain;
 
     class Vulkan
     {
@@ -50,44 +51,26 @@ namespace Renderer
         VkResult createInstance();
         VkResult setupDebugMessenger();
         VkResult createSurface();
-        VkResult createSwapChain();
-        VkResult createImageViews();
         VkResult createRenderPass();
         VkResult createGraphicsPipeline(const std::filesystem::path& shaderPath);
-        VkResult createFramebuffers();
-        // VkResult createCommandBuffers();
-        // VkResult recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex);
         
-        void cleanupSwapChain();
-        void recreateSwapChain();
         void populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo);
-        VkSurfaceFormatKHR chooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats);
-        VkPresentModeKHR chooseSwapPresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes);
-        VkExtent2D chooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities);
 
         GLFWwindow* m_window = nullptr;
 
-        std::unique_ptr<Device> m_device = nullptr;
         std::unique_ptr<CommandPool> m_commandPool = nullptr;
+        std::unique_ptr<Device> m_device           = nullptr;
+        std::unique_ptr<SwapChain> m_swapChain     = nullptr;
 
         VkInstance m_instance                     = VK_NULL_HANDLE;
         VkDebugUtilsMessengerEXT m_debugMessenger = VK_NULL_HANDLE;
         VkSurfaceKHR m_surface                    = VK_NULL_HANDLE;
-        VkSwapchainKHR m_swapChain                = VK_NULL_HANDLE;
         VkRenderPass m_renderPass                 = VK_NULL_HANDLE;
         VkPipeline m_graphicsPipeline             = VK_NULL_HANDLE;
         VkPipelineLayout m_pipelineLayout         = VK_NULL_HANDLE;
         
-        // std::vector<VkCommandBuffer> m_commandBuffers;
-
         std::unique_ptr<CommandBuffers> m_commandBuffers;
         std::vector<std::unique_ptr<SyncObject>> m_syncObjects;
-
-        std::vector<VkImage> m_swapChainImages;
-        std::vector<VkImageView> m_swapChainImageViews;
-        std::vector<VkFramebuffer> m_swapChainFramebuffers;
-        VkFormat m_swapChainImageFormat;
-        VkExtent2D m_swapChainExtent;
 
         bool m_framebufferResized = false;
         uint32_t m_currentFrame = 0;
