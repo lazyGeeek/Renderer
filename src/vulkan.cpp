@@ -2,6 +2,7 @@
 #include "renderer/command_buffers.hpp"
 #include "renderer/command_pool.hpp"
 #include "renderer/device.hpp"
+#include "renderer/render_pass.hpp"
 #include "renderer/shader.hpp"
 #include "renderer/sync_object.hpp"
 #include "renderer/swap_chain.hpp"
@@ -57,9 +58,11 @@ namespace Renderer
         m_swapChain =std::make_unique<SwapChain>(m_window, *m_device.get(), m_surface);
         m_swapChain->Create();
 
-        throwIfFailed(createRenderPass(), "Failed to create render pass");
+        m_renderPass = std::make_unique<RenderPass>(*m_device.get());
+        m_renderPass->Create(*m_swapChain.get());
+
         throwIfFailed(createGraphicsPipeline(shaderPath), "Failed to create graphics pipeline");
-        m_swapChain->CreateFramebuffers(m_renderPass);
+        m_swapChain->CreateFramebuffers(*m_renderPass.get());
 
         m_commandPool = std::make_unique<CommandPool>(*m_device.get());
         m_commandPool->Create();
@@ -90,8 +93,8 @@ namespace Renderer
         if (m_pipelineLayout != VK_NULL_HANDLE)
             vkDestroyPipelineLayout(device, m_pipelineLayout, nullptr);
         
-        if (m_renderPass != VK_NULL_HANDLE)
-            vkDestroyRenderPass(device, m_renderPass, nullptr);
+        m_renderPass->Destroy();
+        m_renderPass = nullptr;
 
         for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i)
         {
@@ -129,7 +132,7 @@ namespace Renderer
         
         if (result == VK_ERROR_OUT_OF_DATE_KHR)
         {
-            m_swapChain->Recreate(m_renderPass);
+            m_swapChain->Recreate(*m_renderPass.get());
             return;
         }
         else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR)
@@ -145,7 +148,7 @@ namespace Renderer
         {
             .FrameBuffer = m_swapChain->GetFramebuffer(imageIndex),
             .GraphicsPipeline = m_graphicsPipeline,
-            .RenderPass = m_renderPass,
+            .RenderPass = m_renderPass->Get(),
             .SwapChainExtent = m_swapChain->GetExtent()
         };
 
@@ -186,7 +189,7 @@ namespace Renderer
         if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || m_framebufferResized)
         {
             m_framebufferResized = false;
-            m_swapChain->Recreate(m_renderPass);
+            m_swapChain->Recreate(*m_renderPass.get());
         }
         else if (result != VK_SUCCESS)
         {
@@ -355,47 +358,6 @@ namespace Renderer
         return glfwCreateWindowSurface(m_instance, m_window, nullptr, &m_surface);
     }
 
-    VkResult Vulkan::createRenderPass()
-    {
-        VkAttachmentDescription colorAttachment { };
-        colorAttachment.format = m_swapChain->GetImageFormat();
-        colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
-        colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-        colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-        colorAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-        colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-        colorAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-        colorAttachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-
-        VkAttachmentReference colorAttachmentRef { };
-        colorAttachmentRef.attachment = 0;
-        colorAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-
-        VkSubpassDescription subpass { };
-        subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-        subpass.colorAttachmentCount = 1;
-        subpass.pColorAttachments = &colorAttachmentRef;
-
-        VkSubpassDependency dependency { };
-        dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
-        dependency.dstSubpass = 0;
-        dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-        dependency.srcAccessMask = 0;
-        dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-        dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-
-        VkRenderPassCreateInfo renderPassInfo { };
-        renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-        renderPassInfo.attachmentCount = 1;
-        renderPassInfo.pAttachments = &colorAttachment;
-        renderPassInfo.subpassCount = 1;
-        renderPassInfo.pSubpasses = &subpass;
-        renderPassInfo.dependencyCount = 1;
-        renderPassInfo.pDependencies = &dependency;
-
-        return vkCreateRenderPass(m_device->GetLogicalDevice(), &renderPassInfo, nullptr, &m_renderPass);
-    }
-
     VkResult Vulkan::createGraphicsPipeline(const std::filesystem::path& shaderPath)
     {
         VkPipelineVertexInputStateCreateInfo vertexInputInfo { };
@@ -513,7 +475,7 @@ namespace Renderer
         pipelineInfo.pColorBlendState = &colorBlending;
         pipelineInfo.pDynamicState = &dynamicState;
         pipelineInfo.layout = m_pipelineLayout;
-        pipelineInfo.renderPass = m_renderPass;
+        pipelineInfo.renderPass = m_renderPass->Get();
         pipelineInfo.subpass = 0;
         pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
 

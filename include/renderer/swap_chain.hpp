@@ -3,6 +3,7 @@
 #define RENDERER_SWAP_CHAIN_HPP_
 
 #include "renderer/device.hpp"
+#include "renderer/render_pass.hpp"
 
 #include <vulkan/vulkan.h>
 
@@ -26,8 +27,8 @@ namespace Renderer
 
         void Create();
         void Clear();
-        void Recreate(const VkRenderPass& renderPass);
-        void CreateFramebuffers(const VkRenderPass& renderPass);
+        void Recreate(const RenderPass& renderPass);
+        void CreateFramebuffers(const RenderPass& renderPass);
 
         const VkSwapchainKHR& GetSwapChainKHR() const;
         const VkFramebuffer& GetFramebuffer(size_t imageIndex);

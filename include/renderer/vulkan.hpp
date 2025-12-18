@@ -16,6 +16,7 @@ namespace Renderer
     class Device;
     class CommandBuffers;
     class CommandPool;
+    class RenderPass;
     class SyncObject;
     class SwapChain;
 
@@ -51,7 +52,7 @@ namespace Renderer
         VkResult createInstance();
         VkResult setupDebugMessenger();
         VkResult createSurface();
-        VkResult createRenderPass();
+        // VkResult createRenderPass();
         VkResult createGraphicsPipeline(const std::filesystem::path& shaderPath);
         
         void populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo);
@@ -60,12 +61,13 @@ namespace Renderer
 
         std::unique_ptr<CommandPool> m_commandPool = nullptr;
         std::unique_ptr<Device> m_device           = nullptr;
+        std::unique_ptr<RenderPass> m_renderPass   = nullptr;
         std::unique_ptr<SwapChain> m_swapChain     = nullptr;
 
         VkInstance m_instance                     = VK_NULL_HANDLE;
         VkDebugUtilsMessengerEXT m_debugMessenger = VK_NULL_HANDLE;
         VkSurfaceKHR m_surface                    = VK_NULL_HANDLE;
-        VkRenderPass m_renderPass                 = VK_NULL_HANDLE;
+        // VkRenderPass m_renderPass                 = VK_NULL_HANDLE;
         VkPipeline m_graphicsPipeline             = VK_NULL_HANDLE;
         VkPipelineLayout m_pipelineLayout         = VK_NULL_HANDLE;
         

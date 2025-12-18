@@ -103,7 +103,7 @@ namespace Renderer
         }
     }
 
-    void SwapChain::Recreate(const VkRenderPass& renderPass)
+    void SwapChain::Recreate(const RenderPass& renderPass)
     {
         int width = 0;
         int height = 0;
@@ -124,7 +124,7 @@ namespace Renderer
         CreateFramebuffers(renderPass);
     }
 
-    void SwapChain::CreateFramebuffers(const VkRenderPass& renderPass)
+    void SwapChain::CreateFramebuffers(const RenderPass& renderPass)
     {
         m_swapChainFramebuffers.resize(m_swapChainImageViews.size());
 
@@ -137,7 +137,7 @@ namespace Renderer
 
             VkFramebufferCreateInfo framebufferInfo { };
             framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-            framebufferInfo.renderPass = renderPass;
+            framebufferInfo.renderPass = renderPass.Get();
             framebufferInfo.attachmentCount = 1;
             framebufferInfo.pAttachments = attachments;
             framebufferInfo.width = m_swapChainExtent.width;
