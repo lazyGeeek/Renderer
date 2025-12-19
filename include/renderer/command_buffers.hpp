@@ -11,6 +11,8 @@
 
 namespace Renderer
 {
+    class SyncObject;
+
     struct CommandBufferRecordInfo
     {
         const VkFramebuffer& FrameBuffer;
@@ -36,6 +38,8 @@ namespace Renderer
 
         void Reset(size_t frameIndex) const;
         void Record(size_t frameIndex, const CommandBufferRecordInfo& recordInfo) const;
+
+        void SubmitQueue(uint32_t frameIndex, const SyncObject& syncObject) const;
 
     private:
         const Device& m_device;

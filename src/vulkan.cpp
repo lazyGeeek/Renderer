@@ -1,16 +1,14 @@
 #include "renderer/vulkan.hpp"
 #include "renderer/command_buffers.hpp"
 #include "renderer/command_pool.hpp"
-#include "renderer/debug_messanger.hpp"
 #include "renderer/device.hpp"
 #include "renderer/frame_buffers.hpp"
+#include "renderer/instance.hpp"
 #include "renderer/pipeline.hpp"
 #include "renderer/render_pass.hpp"
 #include "renderer/shader.hpp"
 #include "renderer/sync_object.hpp"
 #include "renderer/swap_chain.hpp"
-
-#include <unordered_set>
 
 namespace Renderer
 {
@@ -18,20 +16,13 @@ namespace Renderer
 
     void Vulkan::Init(const std::filesystem::path& shaderPath)
     {
-        createInstance();
+        m_instance = std::make_unique<Instance>(m_window, ENABLE_VALIDATION_LAYERS);
+        m_instance->Create();
 
-        if (ENABLE_VALIDATION_LAYERS)
-        {
-            m_debugMessanger = std::make_unique<DebugMessanger>(m_instance);
-            m_debugMessanger->Create();
-        }
-
-        createSurface();            
-
-        m_device = std::make_unique<Device>(*this);
+        m_device = std::make_unique<Device>(*m_instance.get());
         m_device->Create();
 
-        m_swapChain =std::make_unique<SwapChain>(m_window, *m_device.get(), m_surface);
+        m_swapChain =std::make_unique<SwapChain>(m_window, *m_device.get(), *m_instance.get());
         m_swapChain->Create();
 
         m_renderPass = std::make_unique<RenderPass>(*m_device.get(), *m_swapChain.get());
@@ -80,45 +71,61 @@ namespace Renderer
 
     Vulkan::~Vulkan()
     {
+        if (!m_device)
+            return;
+
         m_device->WaitIdle();
         const VkDevice& device = m_device->GetLogicalDevice(); 
 
-        m_frameBuffers->Destroy();
-        m_frameBuffers = nullptr;
+        if (m_frameBuffers)
+        {
+            m_frameBuffers->Destroy();
+            m_frameBuffers = nullptr;
+        }
 
-        m_swapChain->Clear();
-        m_swapChain = nullptr;
+        if (m_swapChain)
+        {
+            m_swapChain->Clear();
+            m_swapChain = nullptr;
+        }
 
-        m_pipeline->Destroy();
-        m_pipeline = nullptr;
-        
-        m_renderPass->Destroy();
-        m_renderPass = nullptr;
+        if (m_pipeline)
+        {
+            m_pipeline->Destroy();
+            m_pipeline = nullptr;
+        }
+
+        if (m_renderPass)
+        {
+            m_renderPass->Destroy();
+            m_renderPass = nullptr;
+        }
 
         for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i)
         {
-            m_syncObjects[i]->Destroy();
-            m_syncObjects[i] = nullptr;
+            if (m_syncObjects[i])
+            {
+                m_syncObjects[i]->Destroy();
+                m_syncObjects[i] = nullptr;
+            }
         }
 
-        m_commandPool->Destroy();
-        m_commandPool = nullptr;
-            
-        m_device->Destroy();
-        m_device = nullptr;
-
-        if (m_instance != VK_NULL_HANDLE)
+        if (m_commandPool)
         {
-            if (ENABLE_VALIDATION_LAYERS && m_debugMessanger)
-            {
-                m_debugMessanger->Destroy();
-                m_debugMessanger = nullptr;
-            }
+            m_commandPool->Destroy();
+            m_commandPool = nullptr;
+        }
 
-            if (m_surface != VK_NULL_HANDLE)
-                vkDestroySurfaceKHR(m_instance, m_surface, nullptr);
+        if (m_device)
+        {
+            m_device->Destroy();
+            m_device = nullptr;
+        }
 
-            vkDestroyInstance(m_instance, nullptr);
+        if (m_instance)
+        {
+            m_instance->Destroy();
+            m_instance = nullptr;
         }
     }
 
@@ -140,7 +147,7 @@ namespace Renderer
         }
         else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR)
         {
-            throw std::runtime_error("Failed to acquire swap chain image");
+            throw std::runtime_error("[Vulkan] Failed to acquire swap chain image");
         }
         
         m_syncObjects[m_currentFrame]->ResetFence();
@@ -156,39 +163,8 @@ namespace Renderer
         };
 
         m_commandBuffers->Record(m_currentFrame, recordInfo);
-
-        VkSubmitInfo submitInfo { };
-        submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-
-        VkSemaphore waitSemaphores[] = { m_syncObjects[m_currentFrame]->GetImageAvailableSemaphore() };
-        VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
-        submitInfo.waitSemaphoreCount = 1;
-        submitInfo.pWaitSemaphores = waitSemaphores;
-        submitInfo.pWaitDstStageMask = waitStages;
-
-        submitInfo.commandBufferCount = 1;
-        submitInfo.pCommandBuffers = &m_commandBuffers->Get(m_currentFrame);
-
-        VkSemaphore signalSemaphores[] = { m_syncObjects[m_currentFrame]->GetRenderFinishedSemaphore() };
-        submitInfo.signalSemaphoreCount = 1;
-        submitInfo.pSignalSemaphores = signalSemaphores;
-
-        if (vkQueueSubmit(m_device->GetGraphicsQueue(), 1, &submitInfo, m_syncObjects[m_currentFrame]->GetInFlightFence()) != VK_SUCCESS)
-            throw std::runtime_error("Failed to submit draw command buffer");
-
-        VkPresentInfoKHR presentInfo { };
-        presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
-
-        presentInfo.waitSemaphoreCount = 1;
-        presentInfo.pWaitSemaphores = signalSemaphores;
-
-        VkSwapchainKHR swapChains[] = { m_swapChain->GetSwapChainKHR() };
-        presentInfo.swapchainCount = 1;
-        presentInfo.pSwapchains = swapChains;
-        presentInfo.pImageIndices = &imageIndex;
-        presentInfo.pResults = nullptr; // Optional
-
-        result = vkQueuePresentKHR(m_device->GetPresentQueue(), &presentInfo);
+        m_commandBuffers->SubmitQueue(m_currentFrame, *m_syncObjects[m_currentFrame].get());
+        result = m_swapChain->PresentKHR(imageIndex, *m_syncObjects[m_currentFrame].get());
 
         if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || m_framebufferResized)
         {
@@ -209,129 +185,8 @@ namespace Renderer
         m_framebufferResized = true;
     }
 
-    const VkInstance& Vulkan::GetInstance() const
-    {
-        return m_instance;
-    }
-
-    const VkSurfaceKHR& Vulkan::GetSurface() const
-    {
-        return m_surface;
-    }
-
     bool Vulkan::IsValidationLayerEnabled() const
     {
         return ENABLE_VALIDATION_LAYERS;
-    }
-
-    void Vulkan::checkValidationLayerSupport()
-    {
-        uint32_t layerCount = 0;
-        vkEnumerateInstanceLayerProperties(&layerCount, nullptr);
-
-        std::vector<VkLayerProperties> availableLayers(layerCount);
-        vkEnumerateInstanceLayerProperties(&layerCount, availableLayers.data());
-
-        for (const char* layerName : m_validationLayers)
-        {
-            bool layerFound = false;
-
-            for (const auto& layerProperties : availableLayers)
-            {
-                if (strcmp(layerName, layerProperties.layerName) == 0)
-                {
-                    layerFound = true;
-                    break;
-                }
-            }
-
-            if (!layerFound)
-                throw std::runtime_error("Validation layers requested, but not available");
-        }
-    }
-
-    void Vulkan::checkGflwRequiredInstanceExtensions(const std::vector<const char*>& requiredExtensions)
-    {
-        uint32_t extensionCount = 0;
-        vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, nullptr);
-        std::vector<VkExtensionProperties> extensions(extensionCount);
-        vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, extensions.data());
-
-        std::unordered_set<std::string> available;
-        for (const auto& extension : extensions)
-        {
-            available.insert(extension.extensionName);
-        }
-
-        for (const auto& required : requiredExtensions)
-        {
-            if (available.find(required) == available.end())
-                throw std::runtime_error("Missing required GLFW extension");
-        }
-    }
-
-    void Vulkan::createInstance()
-    {
-        if (ENABLE_VALIDATION_LAYERS)
-            checkValidationLayerSupport();
-
-        VkApplicationInfo appInfo { };
-        appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
-        appInfo.pApplicationName = "Engine";
-        appInfo.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
-        appInfo.pEngineName = "Vulkan";
-        appInfo.engineVersion = VK_MAKE_VERSION(1, 0, 0);
-        appInfo.apiVersion = VK_API_VERSION_1_3;
-
-        VkInstanceCreateInfo instanceInfo { };
-        instanceInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
-        instanceInfo.pApplicationInfo = &appInfo;
-
-        uint32_t extensionCount = 0;
-        const char** extensions = glfwGetRequiredInstanceExtensions(&extensionCount);
-
-        std::vector<const char*> requiredExtensions;
-
-        for (uint32_t i = 0; i < extensionCount; ++i)
-        {
-            requiredExtensions.emplace_back(extensions[i]);
-        }
-
-        if (ENABLE_VALIDATION_LAYERS)
-            requiredExtensions.emplace_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
-
-        checkGflwRequiredInstanceExtensions(requiredExtensions);
-
-#ifdef __APPLE__
-            requiredExtensions.emplace_back(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME);
-            instanceInfo.flags |= VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR;
-#endif
-
-        instanceInfo.enabledExtensionCount = static_cast<uint32_t>(requiredExtensions.size());
-        instanceInfo.ppEnabledExtensionNames = requiredExtensions.data();
-
-        VkDebugUtilsMessengerCreateInfoEXT debugCreateInfo { };
-        if (ENABLE_VALIDATION_LAYERS)
-        {
-            instanceInfo.enabledLayerCount = static_cast<uint32_t>(m_validationLayers.size());
-            instanceInfo.ppEnabledLayerNames = m_validationLayers.data();
-
-            m_debugMessanger->PopulateDebugMessengerCreateInfo(debugCreateInfo);
-            instanceInfo.pNext = (VkDebugUtilsMessengerCreateInfoEXT*)&debugCreateInfo;
-        }
-        else
-        {
-            instanceInfo.enabledLayerCount = 0;
-            instanceInfo.pNext = nullptr;
-        }
-
-        if (vkCreateInstance(&instanceInfo, nullptr, &m_instance) != VK_SUCCESS)
-            throw std::runtime_error("Failed to create instance");
-    }
-
-    void Vulkan::createSurface()
-    {
-        if (glfwCreateWindowSurface(m_instance, m_window, nullptr, &m_surface) != VK_SUCCESS)
-            throw std::runtime_error("Failed to create surface");
     }
 }

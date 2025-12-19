@@ -13,11 +13,11 @@
 
 namespace Renderer
 {
-    class DebugMessanger;
     class Device;
     class CommandBuffers;
     class CommandPool;
     class FrameBuffers;
+    class Instance;
     class Pipeline;
     class RenderPass;
     class SyncObject;
@@ -38,27 +38,16 @@ namespace Renderer
         void DrawFrame();
         void SetFramebufferResized();
 
-        const VkInstance& GetInstance() const;
-        const VkSurfaceKHR& GetSurface() const;
-
         bool IsValidationLayerEnabled() const;
 
     private:
-        void checkValidationLayerSupport();
-        void checkGflwRequiredInstanceExtensions(const std::vector<const char*>& requiredExtensions);
-        void createInstance();
-        void createSurface();
-
         GLFWwindow* m_window = nullptr;
-
-        VkInstance m_instance                     = VK_NULL_HANDLE;
-        VkSurfaceKHR m_surface                    = VK_NULL_HANDLE;
 
         std::unique_ptr<CommandBuffers> m_commandBuffers = nullptr;
         std::unique_ptr<CommandPool> m_commandPool       = nullptr;
-        std::unique_ptr<DebugMessanger> m_debugMessanger = nullptr;
         std::unique_ptr<Device> m_device                 = nullptr;
         std::unique_ptr<FrameBuffers> m_frameBuffers     = nullptr;
+        std::unique_ptr<Instance> m_instance             = nullptr;
         std::unique_ptr<Pipeline> m_pipeline             = nullptr;
         std::unique_ptr<RenderPass> m_renderPass         = nullptr;
         std::unique_ptr<SwapChain> m_swapChain           = nullptr;
@@ -69,8 +58,6 @@ namespace Renderer
         uint32_t m_currentFrame = 0;
 
         const uint32_t MAX_FRAMES_IN_FLIGHT = 2;
-
-        const std::vector<const char*> m_validationLayers = { "VK_LAYER_KHRONOS_validation" };
 
 #ifdef NDEBUG
         const bool ENABLE_VALIDATION_LAYERS = false;

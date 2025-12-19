@@ -2,7 +2,7 @@
 #ifndef RENDERER_DEVICE_HPP_
 #define RENDERER_DEVICE_HPP_
 
-#include "renderer/vulkan.hpp"
+#include "renderer/instance.hpp"
 
 #include <vulkan/vulkan.h>
 
@@ -32,7 +32,7 @@ namespace Renderer
     class Device
     {
     public:
-        Device(const Vulkan& vulkan);
+        Device(const Instance& instance);
         ~Device();
 
         Device(const Device& other)             = delete;
@@ -44,7 +44,7 @@ namespace Renderer
         void Destroy();
 
         void WaitIdle() const;
-        
+       
         const VkDevice& GetLogicalDevice() const;
         const VkPhysicalDevice& GetPhysicalDevice() const;
         const VkQueue& GetGraphicsQueue() const;
@@ -61,7 +61,7 @@ namespace Renderer
         bool isDeviceSuitable();
         bool checkDeviceExtensionSupport();
 
-        const Vulkan& m_vulkan;
+        const Instance& m_instance;
 
         VkPhysicalDevice m_physicalDevice = VK_NULL_HANDLE;
         VkDevice m_logicalDevice          = VK_NULL_HANDLE;

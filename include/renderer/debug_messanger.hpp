@@ -20,7 +20,7 @@ namespace Renderer
         void Create();
         void Destroy();
 
-        void PopulateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo);
+        static void PopulateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo);
 
     private:
         const VkInstance& m_instance;

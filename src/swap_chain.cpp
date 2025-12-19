@@ -1,11 +1,15 @@
 #include "renderer/swap_chain.hpp"
+#include "renderer/sync_object.hpp"
+
+#include <algorithm>
+#include <cmath>
 
 namespace Renderer
 {
-    SwapChain::SwapChain(GLFWwindow* window, const Device& device, const VkSurfaceKHR& surface) :
+    SwapChain::SwapChain(GLFWwindow* window, const Device& device, const Instance& instance) :
         m_window { window },
         m_device { device },
-        m_surface { surface } { }
+        m_instance { instance } { }
 
     SwapChain::~SwapChain()
     {
@@ -26,7 +30,7 @@ namespace Renderer
 
         VkSwapchainCreateInfoKHR createInfo { };
         createInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
-        createInfo.surface = m_surface;
+        createInfo.surface = m_instance.GetSurface();
         createInfo.minImageCount = imageCount;
         createInfo.imageFormat = surfaceFormat.format;
         createInfo.imageColorSpace = surfaceFormat.colorSpace;
@@ -80,14 +84,6 @@ namespace Renderer
     {
         const VkDevice& device = m_device.GetLogicalDevice();
 
-        // for (auto framebuffer : m_swapChainFramebuffers)
-        // {
-        //     if (framebuffer != VK_NULL_HANDLE)
-        //         vkDestroyFramebuffer(device, framebuffer, nullptr);
-        // }
-
-        // m_swapChainFramebuffers.clear();
-
         for (auto imageView : m_swapChainImageViews)
         {
             if (imageView != VK_NULL_HANDLE)
@@ -120,6 +116,24 @@ namespace Renderer
 
         Clear();
         Create();
+    }
+
+    VkResult SwapChain::PresentKHR(uint32_t imageIndex, const SyncObject& syncObject) const
+    {
+        VkPresentInfoKHR presentInfo { };
+        presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+
+        VkSemaphore signalSemaphores[] = { syncObject.GetRenderFinishedSemaphore() };
+        presentInfo.waitSemaphoreCount = 1;
+        presentInfo.pWaitSemaphores = signalSemaphores;
+
+        VkSwapchainKHR swapChains[] = { m_swapChain };
+        presentInfo.swapchainCount = 1;
+        presentInfo.pSwapchains = swapChains;
+        presentInfo.pImageIndices = &imageIndex;
+        presentInfo.pResults = nullptr; // Optional
+
+        return vkQueuePresentKHR(m_device.GetPresentQueue(), &presentInfo);
     }
 
     const VkSwapchainKHR& SwapChain::GetSwapChainKHR() const
@@ -165,7 +179,6 @@ namespace Renderer
 
             if (vkCreateImageView(m_device.GetLogicalDevice(), &createInfo, nullptr, &m_swapChainImageViews[i]) != VK_SUCCESS)
                 throw std::runtime_error("[SwapChain] Failed to create image view");
-
         }
     }
 

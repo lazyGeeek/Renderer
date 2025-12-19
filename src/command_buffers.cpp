@@ -1,5 +1,6 @@
 #include "renderer/command_buffers.hpp"
 #include "renderer/command_pool.hpp"
+#include "renderer/sync_object.hpp"
 
 namespace Renderer
 {
@@ -87,5 +88,30 @@ namespace Renderer
 
         if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS)
             throw std::runtime_error("[Command Buffers] Failed to end command buffer");
+    }
+
+    void CommandBuffers::SubmitQueue(uint32_t frameIndex, const SyncObject& syncObject) const
+    {
+        if (frameIndex >= m_commandBuffers.size())
+            throw std::runtime_error("[Vulkan] Incorrect frame index");
+
+        VkSubmitInfo submitInfo { };
+        submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+
+        VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
+        VkSemaphore waitSemaphores[] = { syncObject.GetImageAvailableSemaphore() };
+        submitInfo.waitSemaphoreCount = 1;
+        submitInfo.pWaitSemaphores = waitSemaphores;
+        submitInfo.pWaitDstStageMask = waitStages;
+        
+        submitInfo.commandBufferCount = 1;
+        submitInfo.pCommandBuffers = &m_commandBuffers[frameIndex];
+        
+        VkSemaphore signalSemaphores[] = { syncObject.GetRenderFinishedSemaphore() };
+        submitInfo.signalSemaphoreCount = 1;
+        submitInfo.pSignalSemaphores = signalSemaphores;
+
+        if (vkQueueSubmit(m_device.GetGraphicsQueue(), 1, &submitInfo, syncObject.GetInFlightFence()) != VK_SUCCESS)
+            throw std::runtime_error("[Vulkan] Failed to submit draw command buffer");
     }
 }

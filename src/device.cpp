@@ -8,7 +8,7 @@
 
 namespace Renderer
 {
-    Device::Device(const Vulkan& vulkan) : m_vulkan { vulkan } { }
+    Device::Device(const Instance& instance) : m_instance { instance } { }
 
     Device::~Device()
     {
@@ -35,7 +35,8 @@ namespace Renderer
 
     void Device::WaitIdle() const
     {
-        vkDeviceWaitIdle(m_logicalDevice);
+        if (m_logicalDevice != VK_NULL_HANDLE)
+            vkDeviceWaitIdle(m_logicalDevice);
     }
     
     const VkDevice& Device::GetLogicalDevice() const
@@ -76,7 +77,7 @@ namespace Renderer
                 indices.GraphicsFamily = i;
 
             VkBool32 presentSupport = false;
-            vkGetPhysicalDeviceSurfaceSupportKHR(m_physicalDevice, i, m_vulkan.GetSurface(), &presentSupport);
+            vkGetPhysicalDeviceSurfaceSupportKHR(m_physicalDevice, i, m_instance.GetSurface(), &presentSupport);
 
             if (presentSupport)
                 indices.PresentFamily = i;
@@ -84,7 +85,7 @@ namespace Renderer
             if (indices.IsComplete())
                 break;
 
-            i++;
+            ++i;
         }
 
         return indices;
@@ -94,24 +95,24 @@ namespace Renderer
     {
         SwapChainSupportDetails details { };
 
-        vkGetPhysicalDeviceSurfaceCapabilitiesKHR(m_physicalDevice, m_vulkan.GetSurface(), &details.capabilities);
+        vkGetPhysicalDeviceSurfaceCapabilitiesKHR(m_physicalDevice, m_instance.GetSurface(), &details.capabilities);
 
         uint32_t formatCount = 0;
-        vkGetPhysicalDeviceSurfaceFormatsKHR(m_physicalDevice, m_vulkan.GetSurface(), &formatCount, nullptr);
+        vkGetPhysicalDeviceSurfaceFormatsKHR(m_physicalDevice, m_instance.GetSurface(), &formatCount, nullptr);
 
         if (formatCount != 0)
         {
             details.formats.resize(formatCount);
-            vkGetPhysicalDeviceSurfaceFormatsKHR(m_physicalDevice, m_vulkan.GetSurface(), &formatCount, details.formats.data());
+            vkGetPhysicalDeviceSurfaceFormatsKHR(m_physicalDevice, m_instance.GetSurface(), &formatCount, details.formats.data());
         }
 
         uint32_t presentModeCount = 0;
-        vkGetPhysicalDeviceSurfacePresentModesKHR(m_physicalDevice, m_vulkan.GetSurface(), &presentModeCount, nullptr);
+        vkGetPhysicalDeviceSurfacePresentModesKHR(m_physicalDevice, m_instance.GetSurface(), &presentModeCount, nullptr);
 
         if (presentModeCount != 0)
         {
             details.presentModes.resize(presentModeCount);
-            vkGetPhysicalDeviceSurfacePresentModesKHR(m_physicalDevice, m_vulkan.GetSurface(), &presentModeCount, details.presentModes.data());
+            vkGetPhysicalDeviceSurfacePresentModesKHR(m_physicalDevice, m_instance.GetSurface(), &presentModeCount, details.presentModes.data());
         }
 
         return details;
@@ -144,13 +145,13 @@ namespace Renderer
     VkResult Device::pickPhysicalDevice()
     {
         uint32_t deviceCount = 0;
-        vkEnumeratePhysicalDevices(m_vulkan.GetInstance(), &deviceCount, nullptr);
+        vkEnumeratePhysicalDevices(m_instance.GetInstance(), &deviceCount, nullptr);
 
         if (deviceCount == 0)
             return VK_ERROR_INCOMPATIBLE_DRIVER;
 
         std::vector<VkPhysicalDevice> devices(deviceCount);
-        vkEnumeratePhysicalDevices(m_vulkan.GetInstance(), &deviceCount, devices.data());
+        vkEnumeratePhysicalDevices(m_instance.GetInstance(), &deviceCount, devices.data());
 
         std::multimap<int, VkPhysicalDevice> candidates;
 
@@ -235,7 +236,7 @@ namespace Renderer
         createInfo.enabledExtensionCount = static_cast<uint32_t>(m_logicalDeviceExtensions.size());
         createInfo.ppEnabledExtensionNames = m_logicalDeviceExtensions.data();
 
-        if (m_vulkan.IsValidationLayerEnabled())
+        if (m_instance.IsValidationLayerEnabled())
         {
             createInfo.enabledLayerCount = static_cast<uint32_t>(m_validationLayers.size());
             createInfo.ppEnabledLayerNames = m_validationLayers.data();

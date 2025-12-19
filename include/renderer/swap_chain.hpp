@@ -3,7 +3,7 @@
 #define RENDERER_SWAP_CHAIN_HPP_
 
 #include "renderer/device.hpp"
-#include "renderer/render_pass.hpp"
+#include "renderer/instance.hpp"
 
 #include <vulkan/vulkan.h>
 
@@ -14,10 +14,12 @@
 
 namespace Renderer
 {
+    class SyncObject;
+
     class SwapChain
     {
     public:
-        SwapChain(GLFWwindow* window, const Device& device, const VkSurfaceKHR& surface);
+        SwapChain(GLFWwindow* window, const Device& device, const Instance& instance);
         ~SwapChain();
 
         SwapChain(const SwapChain& other)             = delete;
@@ -28,6 +30,8 @@ namespace Renderer
         void Create();
         void Clear();
         void Recreate();
+
+        VkResult PresentKHR(uint32_t imageIndex, const SyncObject& syncObject) const;
 
         const VkSwapchainKHR& GetSwapChainKHR() const;
         const VkFormat& GetImageFormat() const;
@@ -44,7 +48,7 @@ namespace Renderer
 
         GLFWwindow* m_window = nullptr;
         const Device& m_device;
-        const VkSurfaceKHR& m_surface;
+        const Instance& m_instance;
 
         VkSwapchainKHR m_swapChain = VK_NULL_HANDLE;
 
