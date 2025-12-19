@@ -27,13 +27,13 @@ namespace Renderer
 
         void Create();
         void Clear();
-        void Recreate(const RenderPass& renderPass);
-        void CreateFramebuffers(const RenderPass& renderPass);
+        void Recreate();
 
         const VkSwapchainKHR& GetSwapChainKHR() const;
-        const VkFramebuffer& GetFramebuffer(size_t imageIndex);
         const VkFormat& GetImageFormat() const;
         const VkExtent2D& GetExtent() const;
+
+        const std::vector<VkImageView>& GetImageViews() const;
 
     private:
         void createImageViews();
@@ -50,7 +50,7 @@ namespace Renderer
 
         std::vector<VkImage> m_swapChainImages;
         std::vector<VkImageView> m_swapChainImageViews;
-        std::vector<VkFramebuffer> m_swapChainFramebuffers;
+        
         VkFormat m_swapChainImageFormat;
         VkExtent2D m_swapChainExtent;
     };

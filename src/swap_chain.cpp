@@ -80,13 +80,13 @@ namespace Renderer
     {
         const VkDevice& device = m_device.GetLogicalDevice();
 
-        for (auto framebuffer : m_swapChainFramebuffers)
-        {
-            if (framebuffer != VK_NULL_HANDLE)
-                vkDestroyFramebuffer(device, framebuffer, nullptr);
-        }
+        // for (auto framebuffer : m_swapChainFramebuffers)
+        // {
+        //     if (framebuffer != VK_NULL_HANDLE)
+        //         vkDestroyFramebuffer(device, framebuffer, nullptr);
+        // }
 
-        m_swapChainFramebuffers.clear();
+        // m_swapChainFramebuffers.clear();
 
         for (auto imageView : m_swapChainImageViews)
         {
@@ -103,7 +103,7 @@ namespace Renderer
         }
     }
 
-    void SwapChain::Recreate(const RenderPass& renderPass)
+    void SwapChain::Recreate()
     {
         int width = 0;
         int height = 0;
@@ -119,49 +119,13 @@ namespace Renderer
         m_device.WaitIdle();
 
         Clear();
-
         Create();
-        CreateFramebuffers(renderPass);
-    }
-
-    void SwapChain::CreateFramebuffers(const RenderPass& renderPass)
-    {
-        m_swapChainFramebuffers.resize(m_swapChainImageViews.size());
-
-        for (size_t i = 0; i < m_swapChainImageViews.size(); ++i)
-        {
-            VkImageView attachments[] =
-            {
-                m_swapChainImageViews[i]
-            };
-
-            VkFramebufferCreateInfo framebufferInfo { };
-            framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-            framebufferInfo.renderPass = renderPass.Get();
-            framebufferInfo.attachmentCount = 1;
-            framebufferInfo.pAttachments = attachments;
-            framebufferInfo.width = m_swapChainExtent.width;
-            framebufferInfo.height = m_swapChainExtent.height;
-            framebufferInfo.layers = 1;
-
-            if (vkCreateFramebuffer(m_device.GetLogicalDevice(), &framebufferInfo, nullptr, &m_swapChainFramebuffers[i]) != VK_SUCCESS)
-                throw std::runtime_error("[SwapChain] Failed to create framebuffer");
-        }
     }
 
     const VkSwapchainKHR& SwapChain::GetSwapChainKHR() const
     {
         return m_swapChain;
     }
-
-    const VkFramebuffer& SwapChain::GetFramebuffer(size_t imageIndex)
-    {
-        if (imageIndex >= m_swapChainFramebuffers.size())
-            throw std::runtime_error("[SwapChain] Image index buffer is not exist");
-
-        return m_swapChainFramebuffers[imageIndex];
-    }
-
 
     const VkFormat& SwapChain::GetImageFormat() const
     {
@@ -171,6 +135,11 @@ namespace Renderer
     const VkExtent2D& SwapChain::GetExtent() const
     {
         return m_swapChainExtent;
+    }
+
+    const std::vector<VkImageView>& SwapChain::GetImageViews() const
+    {
+        return m_swapChainImageViews;
     }
 
     void SwapChain::createImageViews()

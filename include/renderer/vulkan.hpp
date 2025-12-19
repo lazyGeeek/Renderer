@@ -16,6 +16,7 @@ namespace Renderer
     class Device;
     class CommandBuffers;
     class CommandPool;
+    class FrameBuffers;
     class RenderPass;
     class SyncObject;
     class SwapChain;
@@ -59,10 +60,11 @@ namespace Renderer
 
         GLFWwindow* m_window = nullptr;
 
-        std::unique_ptr<CommandPool> m_commandPool = nullptr;
-        std::unique_ptr<Device> m_device           = nullptr;
-        std::unique_ptr<RenderPass> m_renderPass   = nullptr;
-        std::unique_ptr<SwapChain> m_swapChain     = nullptr;
+        std::unique_ptr<CommandPool> m_commandPool   = nullptr;
+        std::unique_ptr<Device> m_device             = nullptr;
+        std::unique_ptr<FrameBuffers> m_frameBuffers = nullptr;
+        std::unique_ptr<RenderPass> m_renderPass     = nullptr;
+        std::unique_ptr<SwapChain> m_swapChain       = nullptr;
 
         VkInstance m_instance                     = VK_NULL_HANDLE;
         VkDebugUtilsMessengerEXT m_debugMessenger = VK_NULL_HANDLE;

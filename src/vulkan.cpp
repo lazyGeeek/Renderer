@@ -2,6 +2,7 @@
 #include "renderer/command_buffers.hpp"
 #include "renderer/command_pool.hpp"
 #include "renderer/device.hpp"
+#include "renderer/frame_buffers.hpp"
 #include "renderer/render_pass.hpp"
 #include "renderer/shader.hpp"
 #include "renderer/sync_object.hpp"
@@ -58,11 +59,20 @@ namespace Renderer
         m_swapChain =std::make_unique<SwapChain>(m_window, *m_device.get(), m_surface);
         m_swapChain->Create();
 
-        m_renderPass = std::make_unique<RenderPass>(*m_device.get());
-        m_renderPass->Create(*m_swapChain.get());
+        m_renderPass = std::make_unique<RenderPass>(*m_device.get(), *m_swapChain.get());
+        m_renderPass->Create();
+
+        FrameBuffersInit init
+        {
+            .Device = *m_device.get(),
+            .RenderPass = *m_renderPass.get(),
+            .SwapChain = *m_swapChain.get()
+        };
+
+        m_frameBuffers = std::make_unique<FrameBuffers>(init);
+        m_frameBuffers->Create();
 
         throwIfFailed(createGraphicsPipeline(shaderPath), "Failed to create graphics pipeline");
-        m_swapChain->CreateFramebuffers(*m_renderPass.get());
 
         m_commandPool = std::make_unique<CommandPool>(*m_device.get());
         m_commandPool->Create();
@@ -83,6 +93,9 @@ namespace Renderer
     {
         m_device->WaitIdle();
         const VkDevice& device = m_device->GetLogicalDevice(); 
+
+        m_frameBuffers->Destroy();
+        m_frameBuffers = nullptr;
 
         m_swapChain->Clear();
         m_swapChain = nullptr;
@@ -132,7 +145,8 @@ namespace Renderer
         
         if (result == VK_ERROR_OUT_OF_DATE_KHR)
         {
-            m_swapChain->Recreate(*m_renderPass.get());
+            m_swapChain->Recreate();
+            m_frameBuffers->Recreate();
             return;
         }
         else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR)
@@ -146,7 +160,7 @@ namespace Renderer
 
         CommandBufferRecordInfo recordInfo
         {
-            .FrameBuffer = m_swapChain->GetFramebuffer(imageIndex),
+            .FrameBuffer = m_frameBuffers->Get(imageIndex),
             .GraphicsPipeline = m_graphicsPipeline,
             .RenderPass = m_renderPass->Get(),
             .SwapChainExtent = m_swapChain->GetExtent()
@@ -189,7 +203,8 @@ namespace Renderer
         if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || m_framebufferResized)
         {
             m_framebufferResized = false;
-            m_swapChain->Recreate(*m_renderPass.get());
+            m_swapChain->Recreate();
+            m_frameBuffers->Recreate();
         }
         else if (result != VK_SUCCESS)
         {

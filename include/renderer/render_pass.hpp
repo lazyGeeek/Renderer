@@ -12,7 +12,7 @@ namespace Renderer
     class RenderPass
     {
     public:
-        RenderPass(const Device& device);
+        RenderPass(const Device& device, const SwapChain& swapChain);
         ~RenderPass();
 
         RenderPass(const RenderPass& other)             = delete;
@@ -20,13 +20,14 @@ namespace Renderer
         RenderPass& operator=(const RenderPass& other)  = delete;
         RenderPass& operator=(const RenderPass&& other) = delete;
 
-        void Create(const SwapChain& swapChain);
+        void Create();
         void Destroy();
 
         const VkRenderPass& Get() const;
-
+        
     private:
         const Device& m_device;
+        const SwapChain& m_swapChain;
 
         VkRenderPass m_renderPass = VK_NULL_HANDLE;
     };

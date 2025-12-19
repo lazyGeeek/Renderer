@@ -2,17 +2,19 @@
 
 namespace Renderer
 {
-    RenderPass::RenderPass(const Device& device) : m_device { device } { }
+    RenderPass::RenderPass(const Device& device, const SwapChain& swapChain) :
+        m_device { device },
+        m_swapChain { swapChain } { }
 
     RenderPass::~RenderPass()
     {
         Destroy();
     }
 
-    void RenderPass::Create(const SwapChain& swapChain)
+    void RenderPass::Create()
     {
         VkAttachmentDescription colorAttachment { };
-        colorAttachment.format = swapChain.GetImageFormat();
+        colorAttachment.format = m_swapChain.GetImageFormat();
         colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
         colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
         colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
