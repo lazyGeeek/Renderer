@@ -41,18 +41,18 @@ namespace Renderer
         return shaderModule;
     }
 
-    Shader::Shader(const VkDevice& device, const ShaderInfo& shaderInfo) : 
+    Shader::Shader(const Device& device, const ShaderInfo& shaderInfo) : 
         m_device { device },
         m_shaderInfo { shaderInfo }
     {
         ShaderConstructor constructor;
-        m_module = constructor.CreateShaderModule(m_device, shaderInfo.FilePath);
+        m_module = constructor.CreateShaderModule(m_device.GetLogicalDevice(), shaderInfo.FilePath);
     }
 
     Shader::~Shader()
     {
         if (m_module != VK_NULL_HANDLE)
-            vkDestroyShaderModule(m_device, m_module, nullptr);
+            vkDestroyShaderModule(m_device.GetLogicalDevice(), m_module, nullptr);
     }
 
     const VkShaderModule& Shader::GetModule() const

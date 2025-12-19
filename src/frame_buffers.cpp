@@ -36,7 +36,7 @@ namespace Renderer
             framebufferInfo.layers = 1;
 
             if (vkCreateFramebuffer(m_device.GetLogicalDevice(), &framebufferInfo, nullptr, &m_framebuffers[i]) != VK_SUCCESS)
-                throw std::runtime_error("[SwapChain] Failed to create framebuffer");
+                throw std::runtime_error("[Frame Buffers] Failed to create framebuffer");
         }
     }
 
@@ -60,7 +60,7 @@ namespace Renderer
     const VkFramebuffer& FrameBuffers::Get(size_t imageIndex)
     {
         if (imageIndex >= m_framebuffers.size())
-            throw std::runtime_error("[SwapChain] Image index buffer is not exist");
+            throw std::runtime_error("[Frame Buffers] Image index buffer is not exist");
 
         return m_framebuffers[imageIndex];
     }

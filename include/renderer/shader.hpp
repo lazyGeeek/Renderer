@@ -2,6 +2,8 @@
 #ifndef RENDERER_SHADER_HPP_
 #define RENDERER_SHADER_HPP_
 
+#include "renderer/device.hpp"
+
 #include <vulkan/vulkan.hpp>
 
 #include <filesystem>
@@ -33,7 +35,7 @@ namespace Renderer
     class Shader
     {
     public:
-        Shader(const VkDevice& device, const ShaderInfo& shaderInfo);
+        Shader(const Device& device, const ShaderInfo& shaderInfo);
         ~Shader();
 
         Shader(const Shader& other)             = delete;
@@ -45,7 +47,7 @@ namespace Renderer
         VkPipelineShaderStageCreateInfo GenerateStageInfo() const;
 
     private:
-        const VkDevice& m_device;
+        const Device& m_device;
         
         VkShaderModule m_module = VK_NULL_HANDLE;
         ShaderInfo m_shaderInfo;
