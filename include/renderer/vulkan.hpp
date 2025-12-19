@@ -13,6 +13,7 @@
 
 namespace Renderer
 {
+    class DebugMessanger;
     class Device;
     class CommandBuffers;
     class CommandPool;
@@ -43,33 +44,24 @@ namespace Renderer
         bool IsValidationLayerEnabled() const;
 
     private:
-        inline void throwIfFailed(VkResult rs, const char* message)
-        {
-            if (rs != VK_SUCCESS)
-                throw std::runtime_error(std::format("VULKAN: {}", message).c_str());
-        }
-
-        VkResult checkValidationLayerSupport();
-        VkResult checkGflwRequiredInstanceExtensions(const std::vector<const char*>& requiredExtensions);
-        VkResult createInstance();
-        VkResult setupDebugMessenger();
-        VkResult createSurface();
-        
-        void populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo);
+        void checkValidationLayerSupport();
+        void checkGflwRequiredInstanceExtensions(const std::vector<const char*>& requiredExtensions);
+        void createInstance();
+        void createSurface();
 
         GLFWwindow* m_window = nullptr;
 
         VkInstance m_instance                     = VK_NULL_HANDLE;
-        VkDebugUtilsMessengerEXT m_debugMessenger = VK_NULL_HANDLE;
         VkSurfaceKHR m_surface                    = VK_NULL_HANDLE;
 
-        std::unique_ptr<CommandBuffers> m_commandBuffers;
-        std::unique_ptr<CommandPool> m_commandPool   = nullptr;
-        std::unique_ptr<Device> m_device             = nullptr;
-        std::unique_ptr<FrameBuffers> m_frameBuffers = nullptr;
-        std::unique_ptr<Pipeline> m_pipeline         = nullptr;
-        std::unique_ptr<RenderPass> m_renderPass     = nullptr;
-        std::unique_ptr<SwapChain> m_swapChain       = nullptr;
+        std::unique_ptr<CommandBuffers> m_commandBuffers = nullptr;
+        std::unique_ptr<CommandPool> m_commandPool       = nullptr;
+        std::unique_ptr<DebugMessanger> m_debugMessanger = nullptr;
+        std::unique_ptr<Device> m_device                 = nullptr;
+        std::unique_ptr<FrameBuffers> m_frameBuffers     = nullptr;
+        std::unique_ptr<Pipeline> m_pipeline             = nullptr;
+        std::unique_ptr<RenderPass> m_renderPass         = nullptr;
+        std::unique_ptr<SwapChain> m_swapChain           = nullptr;
 
         std::vector<std::unique_ptr<SyncObject>> m_syncObjects;
 
