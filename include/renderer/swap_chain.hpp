@@ -2,10 +2,7 @@
 #ifndef RENDERER_SWAP_CHAIN_HPP_
 #define RENDERER_SWAP_CHAIN_HPP_
 
-#include "renderer/device.hpp"
-#include "renderer/instance.hpp"
-
-#include <vulkan/vulkan.h>
+#include <vulkan/vulkan_raii.hpp>
 
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
@@ -14,49 +11,48 @@
 
 namespace Renderer
 {
-    class SyncObject;
+    struct SwapChainBuilder
+    {
+        vk::raii::PhysicalDevice PhysicalDevice { nullptr };
+        const vk::raii::Device& LogicalDevice;
+        vk::SurfaceKHR Surface;
+        GLFWwindow* Window { nullptr };
+        uint32_t GraphicsFamilyIndex;
+        uint32_t PresentFamilyIndex;
+    };
 
     class SwapChain
     {
     public:
-        SwapChain(GLFWwindow* window, const Device& device, const Instance& instance);
-        ~SwapChain();
+        SwapChain()  = default;
+        ~SwapChain() = default;
 
         SwapChain(const SwapChain& other)             = delete;
         SwapChain(SwapChain&& other)                  = delete;
         SwapChain& operator=(const SwapChain& other)  = delete;
         SwapChain& operator=(const SwapChain&& other) = delete;
 
-        void Create();
-        void Clear();
-        void Recreate();
+        void Create(const SwapChainBuilder& builder);
 
-        VkResult PresentKHR(uint32_t imageIndex, const SyncObject& syncObject) const;
-
-        const VkSwapchainKHR& GetSwapChainKHR() const;
-        const VkFormat& GetImageFormat() const;
-        const VkExtent2D& GetExtent() const;
-
-        const std::vector<VkImageView>& GetImageViews() const;
+        const vk::Extent2D& GetExtent() const;
 
     private:
-        void createImageViews();
+        static vk::PresentModeKHR getPresentMode(const std::vector<vk::PresentModeKHR>& availablePresentModes);
+        static vk::SurfaceFormatKHR getSurfaceFormat(const std::vector<vk::SurfaceFormatKHR>& availableFormats);
+        static uint32_t getMinImageCount(const vk::SurfaceCapabilitiesKHR& surfaceCapabilities);
 
-        VkSurfaceFormatKHR chooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats);
-        VkPresentModeKHR chooseSwapPresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes);
-        VkExtent2D chooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities);
+        vk::Extent2D selectExtent2D(GLFWwindow* window, const vk::SurfaceCapabilitiesKHR& capabilities);
 
-        GLFWwindow* m_window = nullptr;
-        const Device& m_device;
-        const Instance& m_instance;
+        void createImageViews(const vk::raii::Device& device, const vk::Format& format);
 
-        VkSwapchainKHR m_swapChain = VK_NULL_HANDLE;
+        vk::raii::SwapchainKHR m_swapChain { nullptr };
+        vk::SurfaceFormatKHR m_surfaceFormat;
+        vk::Extent2D m_extent;
 
-        std::vector<VkImage> m_swapChainImages;
-        std::vector<VkImageView> m_swapChainImageViews;
-        
-        VkFormat m_swapChainImageFormat;
-        VkExtent2D m_swapChainExtent;
+        std::vector<vk::Image> m_images;
+        std::vector<vk::raii::ImageView> m_imageViews;
+
+        inline static uint32_t m_defaultImageCount { 3u };
     };
 }
 

@@ -2,31 +2,24 @@
 #ifndef RENDERER_SHADER_HPP_
 #define RENDERER_SHADER_HPP_
 
-#include "renderer/device.hpp"
-
-#include <vulkan/vulkan.hpp>
+#include <vulkan/vulkan_raii.hpp>
 
 #include <filesystem>
 
 namespace Renderer
 {
-    enum class EShaderType
+    struct ShaderBuilder
     {
-        Vertex = VK_SHADER_STAGE_VERTEX_BIT,
-        Fragment = VK_SHADER_STAGE_FRAGMENT_BIT,
-        Geometry = VK_SHADER_STAGE_GEOMETRY_BIT
-    };
-
-    struct ShaderInfo
-    {
+        const vk::raii::Device& Device;
         std::filesystem::path FilePath;
-        EShaderType Type;
+        vk::ShaderStageFlagBits Type;
     };
 
     class ShaderConstructor
     {
     public:
-        VkShaderModule CreateShaderModule(const VkDevice& device, const std::filesystem::path& shaderFile);        
+        [[nodiscard]] vk::raii::ShaderModule CreateShaderModule(const vk::raii::Device& device,
+                                                                const std::filesystem::path& shaderFile);        
     
     private:
         std::vector<char> readFile(const std::filesystem::path& shaderFile);
@@ -35,22 +28,22 @@ namespace Renderer
     class Shader
     {
     public:
-        Shader(const Device& device, const ShaderInfo& shaderInfo);
-        ~Shader();
+        Shader()  = default;
+        ~Shader() = default;
 
         Shader(const Shader& other)             = delete;
         Shader(Shader&& other)                  = delete;
         Shader& operator=(const Shader& other)  = delete;
         Shader& operator=(const Shader&& other) = delete;
 
-        const VkShaderModule& GetModule() const;
-        VkPipelineShaderStageCreateInfo GenerateStageInfo() const;
+        void Create(const ShaderBuilder& builder);
+
+        vk::PipelineShaderStageCreateInfo GetPipelineStageCreateInfo() const;
 
     private:
-        const Device& m_device;
-        
-        VkShaderModule m_module = VK_NULL_HANDLE;
-        ShaderInfo m_shaderInfo;
+        vk::raii::ShaderModule m_shaderModule { nullptr };
+        vk::PipelineShaderStageCreateInfo m_stageInfo { };
+        vk::ShaderStageFlagBits m_type = vk::ShaderStageFlagBits::eVertex;
     };
 }
 

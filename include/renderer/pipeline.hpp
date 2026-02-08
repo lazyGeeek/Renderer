@@ -2,38 +2,34 @@
 #ifndef RENDERER_PIPELINE_HPP_
 #define RENDERER_PIPELINE_HPP_
 
-#include "renderer/device.hpp"
-#include "renderer/render_pass.hpp"
-#include "renderer/shader.hpp"
-
-#include <vulkan/vulkan.h>
+#include <vulkan/vulkan_raii.hpp>
 
 #include <vector>
 
 namespace Renderer
 {
+    struct PipelineBuilder
+    {
+        const vk::raii::Device& Device { nullptr };
+        const vk::Extent2D& Extent;
+        std::vector<vk::PipelineShaderStageCreateInfo> ShaderStages;
+    };
+
     class Pipeline
     {
     public:
-        Pipeline(const Device& device, const RenderPass& renderPass);
-        ~Pipeline();
+        Pipeline()  = default;
+        ~Pipeline() = default;
 
         Pipeline(const Pipeline& other)             = delete;
         Pipeline(Pipeline&& other)                  = delete;
         Pipeline& operator=(const Pipeline& other)  = delete;
         Pipeline& operator=(const Pipeline&& other) = delete;
 
-        void Create(const Shader& vertex, const Shader& fragment);
-        void Destroy();
-
-        const VkPipeline& GetGraphicsPipeline() const;
+        void Create(const PipelineBuilder& builder);
 
     private:
-        const Device& m_device;
-        const RenderPass& m_renderPass;
-
-        VkPipeline m_graphicsPipeline     = VK_NULL_HANDLE;
-        VkPipelineLayout m_pipelineLayout = VK_NULL_HANDLE;
+        vk::raii::PipelineLayout m_layout { nullptr };
     };
 }
 

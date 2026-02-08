@@ -2,51 +2,60 @@
 #ifndef RENDERER_INSTANCE_HPP_
 #define RENDERER_INSTANCE_HPP_
 
-#include <vulkan/vulkan.h>
-
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 
-#include <memory>
+#include <vulkan/vulkan_raii.hpp>
+
 #include <vector>
 
 namespace Renderer
 {
-    class DebugMessanger;
-
     class Instance
     {
     public:
-        Instance(GLFWwindow* window, bool enableValidationLayer);
-        ~Instance();
+        Instance()  = default;
+        ~Instance() = default;
 
         Instance(const Instance& other)             = delete;
         Instance(Instance&& other)                  = delete;
         Instance& operator=(const Instance& other)  = delete;
         Instance& operator=(const Instance&& other) = delete;
 
-        void Create();
-        void Destroy();
+        void Create(GLFWwindow* window);
 
-        const VkInstance& GetInstance() const;
-        const VkSurfaceKHR& GetSurface() const;
+        const vk::raii::Instance& Get() const;
+        const vk::raii::SurfaceKHR& GetSurface() const;
 
-        bool IsValidationLayerEnabled() const;
+        bool IsValidationLayerEnabled() const { return true; }
 
     private:
-        void checkValidationLayerSupport();
-        void checkGflwRequiredInstanceExtensions(const std::vector<const char*>& requiredExtensions);
+        std::vector<const char*> getRequiredLayers();
+        std::vector<const char*> getRequiredExtensions();
 
-        GLFWwindow* m_window = nullptr;
+        static VKAPI_ATTR vk::Bool32 VKAPI_CALL debugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
+                                                              VkDebugUtilsMessageTypeFlagsEXT messageType,
+                                                              const VkDebugUtilsMessengerCallbackDataEXT* callbackData,
+                                                              void* pUserData);
 
-        std::unique_ptr<DebugMessanger> m_debugMessanger = nullptr;
+        void setupDebugMessenger();
+        void createSurface(GLFWwindow* window);
 
-        VkInstance m_instance  = VK_NULL_HANDLE;
-        VkSurfaceKHR m_surface = VK_NULL_HANDLE;
+        vk::raii::Context m_context;
+	    vk::raii::Instance m_instance { nullptr };
+        vk::raii::DebugUtilsMessengerEXT m_debugMessenger { nullptr };
+        vk::raii::SurfaceKHR m_surface { nullptr };
 
-        const std::vector<const char*> m_validationLayers = { "VK_LAYER_KHRONOS_validation" };
+        const std::vector<char const*> m_validationLayers =
+        {
+            "VK_LAYER_KHRONOS_validation"
+        };
 
-        bool m_enableValidationLayer = false;
+#ifdef NDEBUG
+        bool m_enableValidationLayers = false;
+#else
+        bool m_enableValidationLayers = true;
+#endif
     };
 }
 
