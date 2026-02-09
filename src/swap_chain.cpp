@@ -57,6 +57,11 @@ namespace Renderer
         return m_extent;
     }
 
+    const vk::SurfaceFormatKHR& SwapChain::GetSurfaceFormat() const
+    {
+        return m_surfaceFormat;
+    }
+
     vk::PresentModeKHR SwapChain::getPresentMode(const std::vector<vk::PresentModeKHR>& availablePresentModes)
     {
         if (availablePresentModes.empty())

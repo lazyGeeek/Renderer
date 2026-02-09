@@ -15,6 +15,7 @@ namespace Renderer
     class LogicalDevice;
     class SwapChain;
     class Pipeline;
+    class CommandPool;
 
     class Vulkan
     {
@@ -36,6 +37,7 @@ namespace Renderer
         std::unique_ptr<LogicalDevice> m_logicalDevice { nullptr };
         std::unique_ptr<SwapChain> m_swapChain { nullptr };
         std::unique_ptr<Pipeline> m_pipeline { nullptr };
+        std::unique_ptr<CommandPool> m_commandPool { nullptr };
     };
 }
 

@@ -12,6 +12,7 @@ namespace Renderer
     {
         const vk::raii::Device& Device { nullptr };
         const vk::Extent2D& Extent;
+        const vk::SurfaceFormatKHR& SurfaceFormat;
         std::vector<vk::PipelineShaderStageCreateInfo> ShaderStages;
     };
 
@@ -30,6 +31,7 @@ namespace Renderer
 
     private:
         vk::raii::PipelineLayout m_layout { nullptr };
+        vk::raii::Pipeline m_graphicsPipeline { nullptr };
     };
 }
 

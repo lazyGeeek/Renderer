@@ -52,7 +52,7 @@ namespace Renderer
     vk::PipelineShaderStageCreateInfo Shader::GetPipelineStageCreateInfo() const
     {
         vk::PipelineShaderStageCreateInfo stageInfo { };
-        stageInfo.stage = vk::ShaderStageFlagBits::eVertex;
+        stageInfo.stage = m_type;
         stageInfo.module = *m_shaderModule;
         stageInfo.pName = "main";
 

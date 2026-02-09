@@ -4,6 +4,8 @@ namespace Renderer
 {
     void Pipeline::Create(const PipelineBuilder& builder)
     {
+        vk::PipelineVertexInputStateCreateInfo vertexInputInfo { };
+
         vk::PipelineInputAssemblyStateCreateInfo inputAssembly; { };
         inputAssembly.topology = vk::PrimitiveTopology::eTriangleList;
 
@@ -43,9 +45,9 @@ namespace Renderer
         rasterizer.depthBiasSlopeFactor    = 1.0f;
         rasterizer.lineWidth               = 1.0f;
 
-        // vk::PipelineMultisampleStateCreateInfo multisampling { };
-        // multisampling.rasterizationSamples = vk::SampleCountFlagBits::e1;
-        // multisampling.sampleShadingEnable  = vk::False;
+        vk::PipelineMultisampleStateCreateInfo multisampling { };
+        multisampling.rasterizationSamples = vk::SampleCountFlagBits::e1;
+        multisampling.sampleShadingEnable  = vk::False;
 
         vk::PipelineColorBlendAttachmentState colorBlendAttachment { };
         colorBlendAttachment.blendEnable    = vk::False;
@@ -65,5 +67,30 @@ namespace Renderer
         pipelineLayoutInfo.pushConstantRangeCount = 0;
 
         m_layout = vk::raii::PipelineLayout(builder.Device, pipelineLayoutInfo);
+
+        vk::GraphicsPipelineCreateInfo graphicsPipelineCreateInfo { };
+        graphicsPipelineCreateInfo.stageCount          = 2,
+        graphicsPipelineCreateInfo.pStages             = builder.ShaderStages.data(),
+        graphicsPipelineCreateInfo.pVertexInputState   = &vertexInputInfo,
+        graphicsPipelineCreateInfo.pInputAssemblyState = &inputAssembly,
+        graphicsPipelineCreateInfo.pViewportState      = &viewportState,
+        graphicsPipelineCreateInfo.pRasterizationState = &rasterizer,
+        graphicsPipelineCreateInfo.pMultisampleState   = &multisampling,
+        graphicsPipelineCreateInfo.pColorBlendState    = &colorBlending,
+        graphicsPipelineCreateInfo.pDynamicState       = &dynamicState,
+        graphicsPipelineCreateInfo.layout              = *m_layout,
+        graphicsPipelineCreateInfo.renderPass          = nullptr;
+
+        vk::PipelineRenderingCreateInfo renderingCreateInfo { };
+        renderingCreateInfo.colorAttachmentCount = 1;
+        renderingCreateInfo.pColorAttachmentFormats = &builder.SurfaceFormat.format;
+
+        vk::StructureChain<vk::GraphicsPipelineCreateInfo, vk::PipelineRenderingCreateInfo> pipelineCreateInfoChain =
+        {
+            graphicsPipelineCreateInfo,
+            renderingCreateInfo
+        };
+
+        m_graphicsPipeline = vk::raii::Pipeline(builder.Device, nullptr, pipelineCreateInfoChain.get<vk::GraphicsPipelineCreateInfo>());
     }
 }

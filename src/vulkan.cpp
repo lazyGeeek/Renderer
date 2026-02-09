@@ -6,6 +6,7 @@
 #include "renderer/swap_chain.hpp"
 #include "renderer/shader.hpp"
 #include "renderer/pipeline.hpp"
+#include "renderer/command_pool.hpp"
 
 namespace Renderer
 {
@@ -82,15 +83,28 @@ namespace Renderer
         {
             .Device = m_logicalDevice->Get(),
             .Extent = m_swapChain->GetExtent(),
+            .SurfaceFormat = m_swapChain->GetSurfaceFormat(),
             .ShaderStages = std::move(stages)
         };
 
         m_pipeline = std::make_unique<Pipeline>();
         m_pipeline->Create(pipelineBuilder);
+
+        CommandPoolBuilder commandPoolBuilder
+        {
+            .Device = m_logicalDevice->Get(),
+            .QueueFamilyIndex = indices.GraphicsIndex
+        };
+
+        m_commandPool = std::make_unique<CommandPool>();
+        m_commandPool->Create(commandPoolBuilder);
     }
 
     void Vulkan::Destroy()
     {
+        if (m_commandPool)
+            m_commandPool = nullptr;
+
         if (m_pipeline)
             m_pipeline = nullptr;
 

@@ -35,6 +35,7 @@ namespace Renderer
         void Create(const SwapChainBuilder& builder);
 
         const vk::Extent2D& GetExtent() const;
+        const vk::SurfaceFormatKHR& GetSurfaceFormat() const;
 
     private:
         static vk::PresentModeKHR getPresentMode(const std::vector<vk::PresentModeKHR>& availablePresentModes);

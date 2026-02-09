@@ -35,7 +35,7 @@ namespace Renderer
 
         m_device = vk::raii::Device(builder.PhysicalDevice, deviceCreateInfo);
         m_graphicsQueue = vk::raii::Queue(m_device, builder.GraphicsIndex, 0);
-        m_presentQueue = vk::raii::Queue(m_device, builder.PresentIndex, 0);
+        // m_presentQueue = vk::raii::Queue(m_device, builder.PresentIndex, 0);
     }
 
     const vk::raii::Device& LogicalDevice::Get() const

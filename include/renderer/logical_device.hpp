@@ -34,7 +34,7 @@ namespace Renderer
     private:
         vk::raii::Device m_device { nullptr };
         vk::raii::Queue m_graphicsQueue { nullptr };
-        vk::raii::Queue m_presentQueue { nullptr };
+        // vk::raii::Queue m_presentQueue { nullptr };
     };
 }
 
