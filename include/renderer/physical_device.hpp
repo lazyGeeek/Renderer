@@ -6,6 +6,8 @@
 
 #include <vector>
 
+#include "renderer/interfaces/non_copyable.hpp"
+
 namespace Renderer
 {
     struct QueueFamilyIndices
@@ -14,16 +16,11 @@ namespace Renderer
         uint32_t GraphicsIndex;
     };
 
-    class PhysicalDevice
+    class PhysicalDevice : public Interfaces::NonCopyable
     {
     public:
         PhysicalDevice()  = default;
         ~PhysicalDevice() = default;
-
-        PhysicalDevice(const PhysicalDevice& other)             = delete;
-        PhysicalDevice(PhysicalDevice&& other)                  = delete;
-        PhysicalDevice& operator=(const PhysicalDevice& other)  = delete;
-        PhysicalDevice& operator=(const PhysicalDevice&& other) = delete;
 
         void Create(const vk::raii::Instance& instance);
 

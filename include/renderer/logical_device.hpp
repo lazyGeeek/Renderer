@@ -6,6 +6,8 @@
 
 #include <vector>
 
+#include "renderer/interfaces/non_copyable.hpp"
+
 namespace Renderer
 {
     struct LogicalDeviceBuilder
@@ -16,20 +18,38 @@ namespace Renderer
         std::vector<const char*> DeviceExtensions;
     };
 
-    class LogicalDevice
+    struct QueueSubmitBuilder
+    {
+        const vk::raii::CommandBuffer& CommandBuffer { nullptr }; 
+        const vk::raii::Semaphore& PresentCompleteSemaphore { nullptr };
+        const vk::raii::Semaphore& RenderFinishedSemaphore { nullptr };
+        const vk::raii::Fence& DrawFence { nullptr };
+    };
+
+    struct PresentKHRBuider
+    {
+        const vk::raii::Semaphore& RenderFinishedSemaphore { nullptr };
+        const vk::raii::SwapchainKHR& SwapChain { nullptr };
+        uint32_t ImageIndex;
+    };
+
+    class LogicalDevice : public Interfaces::NonCopyable
     {
     public:
         LogicalDevice()  = default;
         ~LogicalDevice() = default;
 
-        LogicalDevice(const LogicalDevice& other)             = delete;
-        LogicalDevice(LogicalDevice&& other)                  = delete;
-        LogicalDevice& operator=(const LogicalDevice& other)  = delete;
-        LogicalDevice& operator=(const LogicalDevice&& other) = delete;
-
         void Create(const LogicalDeviceBuilder& builder);
 
         const vk::raii::Device& Get() const;
+
+        vk::Result WaitForFence(const vk::raii::Fence& drawFence) const;
+        void ResetFence(const vk::raii::Fence& drawFence) const;
+        void Submit(const QueueSubmitBuilder& queueSubmitBuilder) const;
+
+        void WaitIdle() const;
+
+        vk::Result PresentKHR(const PresentKHRBuider& builder) const;
 
     private:
         vk::raii::Device m_device { nullptr };

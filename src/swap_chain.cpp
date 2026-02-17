@@ -52,6 +52,11 @@ namespace Renderer
         createImageViews(builder.LogicalDevice, m_surfaceFormat.format);
     }
 
+    const vk::raii::SwapchainKHR& SwapChain::Get() const
+    {
+        return m_swapChain;
+    }
+
     const vk::Extent2D& SwapChain::GetExtent() const
     {
         return m_extent;
@@ -60,6 +65,27 @@ namespace Renderer
     const vk::SurfaceFormatKHR& SwapChain::GetSurfaceFormat() const
     {
         return m_surfaceFormat;
+    }
+
+    const vk::Image& SwapChain::GetImage(uint32_t imageIndex)
+    {
+        if (imageIndex >= m_imageViews.size())
+            throw std::runtime_error("[SwapChain][GetImage] Incorrect imageIndex");
+            
+        return m_images[imageIndex];
+    }
+    
+    const vk::ImageView& SwapChain::GetImageView(uint32_t imageIndex)
+    {
+        if (imageIndex >= m_imageViews.size())
+            throw std::runtime_error("[SwapChain][GetImageView] Incorrect imageIndex");
+
+        return m_imageViews[imageIndex];
+    }
+
+    vk::ResultValue<uint32_t> SwapChain::AcquireNextImage(const vk::raii::Semaphore& presentCompleteSemaphore) const
+    {
+        return m_swapChain.acquireNextImage(UINT64_MAX, *presentCompleteSemaphore, nullptr);
     }
 
     vk::PresentModeKHR SwapChain::getPresentMode(const std::vector<vk::PresentModeKHR>& availablePresentModes)

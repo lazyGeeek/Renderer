@@ -38,16 +38,23 @@ file(
 )
 
 foreach (BIN_FILE ${RENDERER_BINS_LIST})
-    get_filename_component(BIN_NAME "${BIN_FILE}" NAME)
-    file(COPY_FILE ${BIN_FILE} ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${BIN_NAME} ONLY_IF_DIFFERENT)
+    file(COPY ${BIN_FILE} DESTINATION ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
 endforeach()
 
 foreach (LIB_FILE ${RENDERER_LIBS_LIST})
-    get_filename_component(LIB_NAME "${LIB_FILE}" NAME)
-    file(COPY_FILE ${LIB_FILE} ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${LIB_NAME} ONLY_IF_DIFFERENT)
+    file(COPY ${LIB_FILE} DESTINATION ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
 endforeach()
 
-execute_process(COMMAND python3 "${CMAKE_CURRENT_SOURCE_DIR}/shaders/build_shaders.py")
+file(
+    GLOB_RECURSE RENDERER_BIULD_LIBS
+    "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}*.lib"
+)
+
+if(WIN32)
+    execute_process(COMMAND python "${CMAKE_CURRENT_SOURCE_DIR}/shaders/build_shaders.py")
+else()
+    execute_process(COMMAND python3 "${CMAKE_CURRENT_SOURCE_DIR}/shaders/build_shaders.py")
+endif()
 
 file(
     GLOB_RECURSE RENDERER_SHADERS_LIST
@@ -68,13 +75,13 @@ file(
 
 add_library(${RENDERER_PROJECT} SHARED ${RENDERER_CODE_LIST})
 
-target_compile_features(${RENDERER_PROJECT} PRIVATE cxx_std_20)
-target_include_directories(${RENDERER_PROJECT} PRIVATE
+target_compile_features(${RENDERER_PROJECT} PUBLIC cxx_std_20)
+target_include_directories(${RENDERER_PROJECT} PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/include
     ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/include
     ${Vulkan_INCLUDE_DIRS}
 )
-target_link_libraries(${RENDERER_PROJECT} PRIVATE ${RENDERER_BINS_LIST} ${Vulkan_LIBRARIES})
+target_link_libraries(${RENDERER_PROJECT} PUBLIC ${RENDERER_BIULD_LIBS} ${Vulkan_LIBRARIES})
 
 foreach(RENDERER_FILE IN ITEMS ${RENDERER_CODE_LIST})
     get_filename_component(RENDERER_FILE_PATH "${RENDERER_FILE}" PATH)
@@ -86,7 +93,3 @@ foreach(RENDERER_FILE IN ITEMS ${RENDERER_CODE_LIST})
     string(REPLACE "include/renderer" "" GROUP_PATH "${GROUP_PATH}")
     source_group("${GROUP_PATH}" FILES "${RENDERER_FILE}")
 endforeach()
-
-if(MSVC)
-    set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT ${RENDERER_PROJECT})
-endif()

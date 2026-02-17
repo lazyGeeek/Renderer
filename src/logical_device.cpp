@@ -43,4 +43,48 @@ namespace Renderer
         return m_device;
     }
 
+    vk::Result LogicalDevice::WaitForFence(const vk::raii::Fence& drawFence) const
+    {
+        return m_device.waitForFences(*drawFence, vk::True, UINT64_MAX);
+    }
+
+    void LogicalDevice::ResetFence(const vk::raii::Fence& drawFence) const
+    {
+        m_device.resetFences(*drawFence);
+    }
+
+    void LogicalDevice::Submit(const QueueSubmitBuilder& queueSubmitBuilder) const
+    {
+        vk::PipelineStageFlags waitDestinationStageMask(vk::PipelineStageFlagBits::eColorAttachmentOutput);
+
+        vk::SubmitInfo submitInfo { };
+        submitInfo.waitSemaphoreCount = 1;
+        submitInfo.pWaitSemaphores = &*queueSubmitBuilder.PresentCompleteSemaphore;
+        submitInfo.pWaitDstStageMask = &waitDestinationStageMask;
+        submitInfo.commandBufferCount = 1;
+        submitInfo.pCommandBuffers = &*queueSubmitBuilder.CommandBuffer;
+        submitInfo.signalSemaphoreCount = 1;
+        submitInfo.pSignalSemaphores = &*queueSubmitBuilder.RenderFinishedSemaphore;
+        
+        m_graphicsQueue.submit(submitInfo, *queueSubmitBuilder.DrawFence);
+    }
+
+    void LogicalDevice::WaitIdle() const
+    {
+        m_device.waitIdle();
+    }
+
+    vk::Result LogicalDevice::PresentKHR(const PresentKHRBuider& builder) const
+    {
+        vk::PresentInfoKHR presentInfoKHR { };
+        presentInfoKHR.waitSemaphoreCount = 1;
+        presentInfoKHR.pWaitSemaphores = &*builder.RenderFinishedSemaphore;
+        presentInfoKHR.swapchainCount = 1;
+        presentInfoKHR.pSwapchains = &*builder.SwapChain;
+        presentInfoKHR.pImageIndices = &builder.ImageIndex;
+        presentInfoKHR.pResults = nullptr; // Optional
+
+        return m_graphicsQueue.presentKHR(presentInfoKHR);
+    }
+
 }

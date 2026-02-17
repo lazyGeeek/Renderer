@@ -93,4 +93,10 @@ namespace Renderer
 
         m_graphicsPipeline = vk::raii::Pipeline(builder.Device, nullptr, pipelineCreateInfoChain.get<vk::GraphicsPipelineCreateInfo>());
     }
+
+    const vk::raii::Pipeline& Pipeline::Get() const
+    {
+        return m_graphicsPipeline;
+    }
+
 }

@@ -8,6 +8,8 @@
 #include <filesystem>
 #include <memory>
 
+#include "renderer/interfaces/non_copyable.hpp"
+
 namespace Renderer
 {
     class Instance;
@@ -16,20 +18,19 @@ namespace Renderer
     class SwapChain;
     class Pipeline;
     class CommandPool;
+    class CommandBuffer;
+    class SyncObject;
 
-    class Vulkan
+    class Vulkan  : public Interfaces::NonCopyable
     {
     public:
         Vulkan();
         ~Vulkan();
 
-        Vulkan(const Vulkan& other)             = delete;
-        Vulkan(Vulkan&& other)                  = delete;
-        Vulkan& operator=(const Vulkan& other)  = delete;
-        Vulkan& operator=(const Vulkan&& other) = delete;
-
         void Init(GLFWwindow* window, const std::filesystem::path& shaderPath);
         void Destroy();
+
+        void Draw();
 
     private:
         std::unique_ptr<Instance> m_instance { nullptr };
@@ -38,6 +39,8 @@ namespace Renderer
         std::unique_ptr<SwapChain> m_swapChain { nullptr };
         std::unique_ptr<Pipeline> m_pipeline { nullptr };
         std::unique_ptr<CommandPool> m_commandPool { nullptr };
+        std::unique_ptr<CommandBuffer> m_commandBuffer { nullptr };
+        std::unique_ptr<SyncObject> m_syncObject { nullptr };
     };
 }
 

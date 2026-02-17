@@ -6,6 +6,8 @@
 
 #include <filesystem>
 
+#include "renderer/interfaces/non_copyable.hpp"
+
 namespace Renderer
 {
     struct ShaderBuilder
@@ -25,16 +27,11 @@ namespace Renderer
         std::vector<char> readFile(const std::filesystem::path& shaderFile);
     };
 
-    class Shader
+    class Shader : public Interfaces::NonCopyable
     {
     public:
         Shader()  = default;
         ~Shader() = default;
-
-        Shader(const Shader& other)             = delete;
-        Shader(Shader&& other)                  = delete;
-        Shader& operator=(const Shader& other)  = delete;
-        Shader& operator=(const Shader&& other) = delete;
 
         void Create(const ShaderBuilder& builder);
 

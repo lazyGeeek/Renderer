@@ -91,9 +91,9 @@ namespace Renderer
         return extensions;
     }
 
-    VKAPI_ATTR vk::Bool32 VKAPI_CALL Instance::debugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
-                                                             VkDebugUtilsMessageTypeFlagsEXT messageType,
-                                                             const VkDebugUtilsMessengerCallbackDataEXT* callbackData,
+    VKAPI_ATTR vk::Bool32 VKAPI_CALL Instance::debugCallback(vk::DebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
+                                                             vk::DebugUtilsMessageTypeFlagsEXT messageType,
+                                                             const vk::DebugUtilsMessengerCallbackDataEXT* callbackData,
                                                              void* pUserData)
     {
         std::cerr << "[Vulkan] Validation layer: Message: " << callbackData->pMessage << std::endl;

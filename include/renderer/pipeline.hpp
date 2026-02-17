@@ -6,6 +6,8 @@
 
 #include <vector>
 
+#include "renderer/interfaces/non_copyable.hpp"
+
 namespace Renderer
 {
     struct PipelineBuilder
@@ -16,18 +18,15 @@ namespace Renderer
         std::vector<vk::PipelineShaderStageCreateInfo> ShaderStages;
     };
 
-    class Pipeline
+    class Pipeline : public Interfaces::NonCopyable
     {
     public:
         Pipeline()  = default;
         ~Pipeline() = default;
 
-        Pipeline(const Pipeline& other)             = delete;
-        Pipeline(Pipeline&& other)                  = delete;
-        Pipeline& operator=(const Pipeline& other)  = delete;
-        Pipeline& operator=(const Pipeline&& other) = delete;
-
         void Create(const PipelineBuilder& builder);
+
+        const vk::raii::Pipeline& Get() const;
 
     private:
         vk::raii::PipelineLayout m_layout { nullptr };

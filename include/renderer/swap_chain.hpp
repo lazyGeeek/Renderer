@@ -9,6 +9,8 @@
 
 #include <vector>
 
+#include "renderer/interfaces/non_copyable.hpp"
+
 namespace Renderer
 {
     struct SwapChainBuilder
@@ -21,21 +23,21 @@ namespace Renderer
         uint32_t PresentFamilyIndex;
     };
 
-    class SwapChain
+    class SwapChain : public Interfaces::NonCopyable
     {
     public:
         SwapChain()  = default;
         ~SwapChain() = default;
 
-        SwapChain(const SwapChain& other)             = delete;
-        SwapChain(SwapChain&& other)                  = delete;
-        SwapChain& operator=(const SwapChain& other)  = delete;
-        SwapChain& operator=(const SwapChain&& other) = delete;
-
         void Create(const SwapChainBuilder& builder);
 
+        const vk::raii::SwapchainKHR& Get() const;
         const vk::Extent2D& GetExtent() const;
         const vk::SurfaceFormatKHR& GetSurfaceFormat() const;
+        const vk::Image& GetImage(uint32_t imageIndex);
+        const vk::ImageView& GetImageView(uint32_t imageIndex);
+
+        vk::ResultValue<uint32_t> AcquireNextImage(const vk::raii::Semaphore& presentCompleteSemaphore) const;
 
     private:
         static vk::PresentModeKHR getPresentMode(const std::vector<vk::PresentModeKHR>& availablePresentModes);

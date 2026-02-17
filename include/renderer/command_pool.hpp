@@ -4,6 +4,8 @@
 
 #include <vulkan/vulkan_raii.hpp>
 
+#include "renderer/interfaces/non_copyable.hpp"
+
 namespace Renderer
 {
     struct CommandPoolBuilder
@@ -12,18 +14,15 @@ namespace Renderer
         uint32_t QueueFamilyIndex;
     };
 
-    class CommandPool
+    class CommandPool : public Interfaces::NonCopyable
     {
     public:
         CommandPool()  = default;
         ~CommandPool() = default;
 
-        CommandPool(const CommandPool& other)             = delete;
-        CommandPool(CommandPool&& other)                  = delete;
-        CommandPool& operator=(const CommandPool& other)  = delete;
-        CommandPool& operator=(const CommandPool&& other) = delete;
-
         void Create(const CommandPoolBuilder& builder);
+
+        const vk::raii::CommandPool& Get() const;
         
     private:
         vk::raii::CommandPool m_commandPool = nullptr;

@@ -7,20 +7,17 @@
 
 #include <vulkan/vulkan_raii.hpp>
 
+#include "renderer/interfaces/non_copyable.hpp"
+
 #include <vector>
 
 namespace Renderer
 {
-    class Instance
+    class Instance : public Interfaces::NonCopyable
     {
     public:
         Instance()  = default;
         ~Instance() = default;
-
-        Instance(const Instance& other)             = delete;
-        Instance(Instance&& other)                  = delete;
-        Instance& operator=(const Instance& other)  = delete;
-        Instance& operator=(const Instance&& other) = delete;
 
         void Create(GLFWwindow* window);
 
@@ -33,9 +30,9 @@ namespace Renderer
         std::vector<const char*> getRequiredLayers();
         std::vector<const char*> getRequiredExtensions();
 
-        static VKAPI_ATTR vk::Bool32 VKAPI_CALL debugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
-                                                              VkDebugUtilsMessageTypeFlagsEXT messageType,
-                                                              const VkDebugUtilsMessengerCallbackDataEXT* callbackData,
+        static VKAPI_ATTR vk::Bool32 VKAPI_CALL debugCallback(vk::DebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
+                                                              vk::DebugUtilsMessageTypeFlagsEXT messageType,
+                                                              const vk::DebugUtilsMessengerCallbackDataEXT* callbackData,
                                                               void* pUserData);
 
         void setupDebugMessenger();

@@ -10,4 +10,9 @@ namespace Renderer
 
         m_commandPool = vk::raii::CommandPool(builder.Device, poolInfo);
     }
+
+    const vk::raii::CommandPool& CommandPool::Get() const
+    {
+        return m_commandPool;
+    }
 }
