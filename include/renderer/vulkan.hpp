@@ -32,9 +32,13 @@ namespace Renderer
         void Init(GLFWwindow* window, const std::filesystem::path& shaderPath);
         void Destroy();
 
-        void Draw();
+        void Draw(GLFWwindow* window);
+
+        void ResizeFramebuffer();
 
     private:
+        void recreateSwapChain(GLFWwindow* window);
+
         std::unique_ptr<Instance> m_instance { nullptr };
         std::unique_ptr<PhysicalDevice> m_physicalDevice { nullptr };
         std::unique_ptr<LogicalDevice> m_logicalDevice { nullptr };
@@ -48,6 +52,7 @@ namespace Renderer
         std::vector<std::unique_ptr<Fence>> m_inFlightFences;
 
         uint32_t m_frameIndex = 0;
+        bool m_framebufferResized = false;
 
         const uint32_t MAX_FRAMES_IN_FLIGHT = 2;
     };

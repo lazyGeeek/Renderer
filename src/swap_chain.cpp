@@ -52,6 +52,23 @@ namespace Renderer
         createImageViews(builder.LogicalDevice, m_surfaceFormat.format);
     }
 
+    void SwapChain::Recreate(const SwapChainBuilder& builder)
+    {
+        int width  = 0;
+        int height = 0;
+        glfwGetFramebufferSize(builder.Window, &width, &height);
+        while (width == 0 || height == 0)
+        {
+            glfwGetFramebufferSize(builder.Window, &width, &height);
+            glfwWaitEvents();
+        }
+        
+        builder.LogicalDevice.waitIdle();
+
+        cleanupSwapChain();
+        Create(builder);
+    }
+
     const vk::raii::SwapchainKHR& SwapChain::Get() const
     {
         return m_swapChain;
@@ -173,5 +190,11 @@ namespace Renderer
             createInfo.image = image;
             m_imageViews.emplace_back(device, createInfo);
         }
+    }
+
+    void SwapChain::cleanupSwapChain()
+    {
+        m_imageViews.clear();
+        m_swapChain = nullptr;
     }
 }

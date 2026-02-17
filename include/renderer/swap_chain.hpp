@@ -31,6 +31,8 @@ namespace Renderer
 
         void Create(const SwapChainBuilder& builder);
 
+        void Recreate(const SwapChainBuilder& builder);
+
         const vk::raii::SwapchainKHR& Get() const;
         const vk::Extent2D& GetExtent() const;
         const vk::SurfaceFormatKHR& GetSurfaceFormat() const;
@@ -49,6 +51,7 @@ namespace Renderer
         vk::Extent2D selectExtent2D(GLFWwindow* window, const vk::SurfaceCapabilitiesKHR& capabilities);
 
         void createImageViews(const vk::raii::Device& device, const vk::Format& format);
+        void cleanupSwapChain();
 
         vk::raii::SwapchainKHR m_swapChain { nullptr };
         vk::SurfaceFormatKHR m_surfaceFormat;

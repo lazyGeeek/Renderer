@@ -171,23 +171,31 @@ namespace Renderer
             m_instance = nullptr;
     }
 
-    void Vulkan::Draw()
+    void Vulkan::Draw(GLFWwindow* window)
     {
-        // m_logicalDevice->WaitIdle();
-
         const vk::raii::Fence& fence = m_inFlightFences[m_frameIndex]->Get();
         const vk::raii::Semaphore& presentCompleteSemaphores = m_presentCompleteSemaphores[m_frameIndex]->Get();
 
         vk::Result result = m_logicalDevice->WaitForFence(fence);
-        m_logicalDevice->ResetFence(fence);
-
         if (result != vk::Result::eSuccess)
-            throw std::runtime_error("[Vulkan][Draw] Failed to wait for fence");
+            throw std::runtime_error("[Vulkan][DrawFrame] Failed to wait for fence");
 
         auto [nextImageResult, imageIndex] = m_swapChain->AcquireNextImage(presentCompleteSemaphores);
 
+        if (nextImageResult == vk::Result::eErrorOutOfDateKHR)
+        {
+            recreateSwapChain(window);
+            return;
+        }
+        if (result != vk::Result::eSuccess && result != vk::Result::eSuboptimalKHR)
+        {
+            assert(result == vk::Result::eTimeout || result == vk::Result::eNotReady);
+            throw std::runtime_error("[SwapChain][Draw] Failed to acquire swap chain image");
+        }
+
         const vk::raii::Semaphore& renderFinishedSemaphore = m_renderFinishedSemaphores[imageIndex]->Get();
 
+        m_logicalDevice->ResetFence(fence);
         m_commandBuffers->Reset(m_frameIndex);
 
         RecordCommandBufferBuilder builder
@@ -217,19 +225,45 @@ namespace Renderer
             .ImageIndex = imageIndex
         };
 
-        result = m_logicalDevice->PresentKHR(presentKHRBuilder);
-		
-        switch (result)
-		{
-			case vk::Result::eSuccess:
-				break;
-			case vk::Result::eSuboptimalKHR:
-				std::cout << "vk::Queue::presentKHR returned vk::Result::eSuboptimalKHR\n";
-				break;
-			default:
-				break;        // an unexpected result is returned!
-		}
+        try
+        {
+            result = m_logicalDevice->PresentKHR(presentKHRBuilder);
+        }
+        catch (std::exception& ex)
+        {
+            std::cerr << "[Vulkan][DrawFrame] Exception: " << ex.what() << "\n";
+        }
+
+        if ((result == vk::Result::eSuboptimalKHR) || (result == vk::Result::eErrorOutOfDateKHR) || m_framebufferResized)
+        {
+            m_framebufferResized = false;
+            recreateSwapChain(window);
+        }
+        else
+            // There are no other success codes than eSuccess; on any error code, presentKHR already threw an exception.
+            assert(result == vk::Result::eSuccess);
 
         m_frameIndex = (m_frameIndex + 1) % MAX_FRAMES_IN_FLIGHT;
+    }
+
+    void Vulkan::ResizeFramebuffer()
+    {
+        m_framebufferResized = true;
+    }
+
+    void Vulkan::recreateSwapChain(GLFWwindow* window)
+    {
+        QueueFamilyIndices indices = m_physicalDevice->GetQueueIndex(*m_instance->GetSurface());
+
+        SwapChainBuilder swapChainBuilder
+        {
+            .PhysicalDevice = m_physicalDevice->Get(),
+            .LogicalDevice = m_logicalDevice->Get(),
+            .Surface = *m_instance->GetSurface(),
+            .Window = window,
+            .GraphicsFamilyIndex = indices.GraphicsIndex,
+            .PresentFamilyIndex = indices.PresentIndex,
+        };
+        m_swapChain->Recreate(swapChainBuilder);
     }
 }
