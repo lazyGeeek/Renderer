@@ -4,14 +4,17 @@
 
 #include <vulkan/vulkan_raii.hpp>
 
+#include <vector>
+
 #include "renderer/interfaces/non_copyable.hpp"
 
 namespace Renderer
 {
-    struct CommandBufferBuilder
+    struct CommandBuffersBuilder
     {
         const vk::raii::Device& Device { nullptr };
         const vk::raii::CommandPool& CommandPool { nullptr };
+        uint32_t BuffersCount;
     };
 
     struct RecordCommandBufferBuilder
@@ -20,19 +23,21 @@ namespace Renderer
         const vk::ImageView& ImageView;
         const vk::Extent2D& SwapChainExtent;
         const vk::raii::Pipeline& GraphicsPipeline { nullptr };
+        uint32_t FrameIndex;
     };
 
-    class CommandBuffer : public Interfaces::NonCopyable
+    class CommandBuffers : public Interfaces::NonCopyable
     {
     public:
-        CommandBuffer()  = default;
-        ~CommandBuffer() = default;
+        CommandBuffers()  = default;
+        ~CommandBuffers() = default;
 
-        void Create(const CommandBufferBuilder& builder);
+        void Create(const CommandBuffersBuilder& builder);
 
         void RecordCommandBuffer(const RecordCommandBufferBuilder& builder);
 
-        const vk::raii::CommandBuffer& Get() const;
+        const vk::raii::CommandBuffer& Get(uint32_t frameIndex) const;
+        void Reset(uint32_t frameIndex) const;
         
     private:
         struct ImageLayoutBuilder
@@ -44,11 +49,12 @@ namespace Renderer
             vk::PipelineStageFlags2 SrcStageMask;
             vk::PipelineStageFlags2 DstStageMask;
             vk::Image Image;
+            uint32_t FrameIndex;
         };
 
         void transitionImageLayout(const ImageLayoutBuilder& imageLayoutBuilder);
 
-        vk::raii::CommandBuffer m_commandBuffer = nullptr;
+        std::vector<vk::raii::CommandBuffer> m_commandBuffers;
     };
 }
 

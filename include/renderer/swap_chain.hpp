@@ -37,6 +37,8 @@ namespace Renderer
         const vk::Image& GetImage(uint32_t imageIndex);
         const vk::ImageView& GetImageView(uint32_t imageIndex);
 
+        size_t GetImagesCount() const;
+
         vk::ResultValue<uint32_t> AcquireNextImage(const vk::raii::Semaphore& presentCompleteSemaphore) const;
 
     private:

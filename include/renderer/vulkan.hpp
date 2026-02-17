@@ -7,6 +7,7 @@
 
 #include <filesystem>
 #include <memory>
+#include <vector>
 
 #include "renderer/interfaces/non_copyable.hpp"
 
@@ -18,8 +19,9 @@ namespace Renderer
     class SwapChain;
     class Pipeline;
     class CommandPool;
-    class CommandBuffer;
-    class SyncObject;
+    class CommandBuffers;
+    class Semaphore;
+    class Fence;
 
     class Vulkan  : public Interfaces::NonCopyable
     {
@@ -39,8 +41,15 @@ namespace Renderer
         std::unique_ptr<SwapChain> m_swapChain { nullptr };
         std::unique_ptr<Pipeline> m_pipeline { nullptr };
         std::unique_ptr<CommandPool> m_commandPool { nullptr };
-        std::unique_ptr<CommandBuffer> m_commandBuffer { nullptr };
-        std::unique_ptr<SyncObject> m_syncObject { nullptr };
+        std::unique_ptr<CommandBuffers> m_commandBuffers { nullptr };
+
+        std::vector<std::unique_ptr<Semaphore>> m_presentCompleteSemaphores;
+        std::vector<std::unique_ptr<Semaphore>> m_renderFinishedSemaphores;
+        std::vector<std::unique_ptr<Fence>> m_inFlightFences;
+
+        uint32_t m_frameIndex = 0;
+
+        const uint32_t MAX_FRAMES_IN_FLIGHT = 2;
     };
 }
 

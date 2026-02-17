@@ -7,8 +7,9 @@
 #include "renderer/shader.hpp"
 #include "renderer/pipeline.hpp"
 #include "renderer/command_pool.hpp"
-#include "renderer/command_buffer.hpp"
-#include "renderer/sync_object.hpp"
+#include "renderer/command_buffers.hpp"
+#include "renderer/semaphore.hpp"
+#include "renderer/fence.hpp"
 
 #include <iostream>
 
@@ -43,12 +44,14 @@ namespace Renderer
 
         m_logicalDevice->Create(logicalDeviceBuilder);
 
+        const vk::raii::Device& logicalDevice = m_logicalDevice->Get();
+
         m_swapChain = std::make_unique<SwapChain>();
 
         SwapChainBuilder swapChainBuilder
         {
             .PhysicalDevice = m_physicalDevice->Get(),
-            .LogicalDevice = m_logicalDevice->Get(),
+            .LogicalDevice = logicalDevice,
             .Surface = *m_instance->GetSurface(),
             .Window = window,
             .GraphicsFamilyIndex = indices.GraphicsIndex,
@@ -59,7 +62,7 @@ namespace Renderer
 
         ShaderBuilder vertexBuilder
         {
-            .Device = m_logicalDevice->Get(),
+            .Device = logicalDevice,
             .FilePath = shaderPath / "triangle_vert.spv",
             .Type = vk::ShaderStageFlagBits::eVertex
         };
@@ -69,7 +72,7 @@ namespace Renderer
 
         ShaderBuilder fragmentBuilder
         {
-            .Device = m_logicalDevice->Get(),
+            .Device = logicalDevice,
             .FilePath = shaderPath / "triangle_frag.spv",
             .Type = vk::ShaderStageFlagBits::eFragment
         };
@@ -85,7 +88,7 @@ namespace Renderer
 
         PipelineBuilder pipelineBuilder
         {
-            .Device = m_logicalDevice->Get(),
+            .Device = logicalDevice,
             .Extent = m_swapChain->GetExtent(),
             .SurfaceFormat = m_swapChain->GetSurfaceFormat(),
             .ShaderStages = std::move(stages)
@@ -96,29 +99,45 @@ namespace Renderer
 
         CommandPoolBuilder commandPoolBuilder
         {
-            .Device = m_logicalDevice->Get(),
+            .Device = logicalDevice,
             .QueueFamilyIndex = indices.GraphicsIndex
         };
 
         m_commandPool = std::make_unique<CommandPool>();
         m_commandPool->Create(commandPoolBuilder);
 
-        CommandBufferBuilder commandBufferBuilder
+        CommandBuffersBuilder commandBufferBuilder
         {
-            .Device = m_logicalDevice->Get(),
-            .CommandPool = m_commandPool->Get()
+            .Device = logicalDevice,
+            .CommandPool = m_commandPool->Get(),
+            .BuffersCount = MAX_FRAMES_IN_FLIGHT
         };
 
-        m_commandBuffer = std::make_unique<CommandBuffer>();
-        m_commandBuffer->Create(commandBufferBuilder);
+        m_commandBuffers = std::make_unique<CommandBuffers>();
+        m_commandBuffers->Create(commandBufferBuilder);
 
-        SyncObjectBuilder syncObjectBuilder
-        {
-            .Device = m_logicalDevice->Get()
-        };
+        m_renderFinishedSemaphores.clear();
 
-        m_syncObject = std::make_unique<SyncObject>();
-        m_syncObject->Create(syncObjectBuilder);
+        for (size_t i = 0; i < m_swapChain->GetImagesCount(); ++i)
+		{
+            std::unique_ptr<Semaphore> renderer = std::make_unique<Semaphore>();
+            renderer->Create(logicalDevice);
+            m_renderFinishedSemaphores.emplace_back(std::move(renderer));
+		}
+
+        m_presentCompleteSemaphores.clear();
+        m_inFlightFences.clear();
+
+		for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i)
+		{
+            std::unique_ptr<Semaphore> present = std::make_unique<Semaphore>();
+            present->Create(logicalDevice);
+            m_presentCompleteSemaphores.emplace_back(std::move(present));
+
+            std::unique_ptr<Fence> fence = std::make_unique<Fence>();
+            fence->Create(logicalDevice);
+            m_inFlightFences.emplace_back(std::move(fence));
+		}
     }
 
     void Vulkan::Destroy()
@@ -126,11 +145,12 @@ namespace Renderer
         if (m_logicalDevice)
             m_logicalDevice->WaitIdle();
 
-        if (m_syncObject)
-            m_syncObject = nullptr;
+        m_presentCompleteSemaphores.clear();
+        m_renderFinishedSemaphores.clear();
+        m_inFlightFences.clear();
 
-        if (m_commandBuffer)
-            m_commandBuffer = nullptr;
+        if (m_commandBuffers)
+            m_commandBuffers = nullptr;
 
         if (m_commandPool)
             m_commandPool = nullptr;
@@ -153,39 +173,46 @@ namespace Renderer
 
     void Vulkan::Draw()
     {
-        m_logicalDevice->WaitIdle();
+        // m_logicalDevice->WaitIdle();
 
-        auto [result, imageIndex] = m_swapChain->AcquireNextImage(m_syncObject->GetPresentCompleteSemaphore());
+        const vk::raii::Fence& fence = m_inFlightFences[m_frameIndex]->Get();
+        const vk::raii::Semaphore& presentCompleteSemaphores = m_presentCompleteSemaphores[m_frameIndex]->Get();
+
+        vk::Result result = m_logicalDevice->WaitForFence(fence);
+        m_logicalDevice->ResetFence(fence);
+
+        if (result != vk::Result::eSuccess)
+            throw std::runtime_error("[Vulkan][Draw] Failed to wait for fence");
+
+        auto [nextImageResult, imageIndex] = m_swapChain->AcquireNextImage(presentCompleteSemaphores);
+
+        const vk::raii::Semaphore& renderFinishedSemaphore = m_renderFinishedSemaphores[imageIndex]->Get();
+
+        m_commandBuffers->Reset(m_frameIndex);
 
         RecordCommandBufferBuilder builder
         {
             .Image = m_swapChain->GetImage(imageIndex),
             .ImageView = m_swapChain->GetImageView(imageIndex),
             .SwapChainExtent = m_swapChain->GetExtent(),
-            .GraphicsPipeline = m_pipeline->Get()
+            .GraphicsPipeline = m_pipeline->Get(),
+            .FrameIndex = m_frameIndex
         };
 
-        m_commandBuffer->RecordCommandBuffer(builder);
-
-        m_logicalDevice->ResetFence(m_syncObject->GetDrawFence());
+        m_commandBuffers->RecordCommandBuffer(builder);
 
         QueueSubmitBuilder queueSubmitBuilder
         {
-            .CommandBuffer = m_commandBuffer->Get(),
-            .PresentCompleteSemaphore = m_syncObject->GetPresentCompleteSemaphore(),
-            .RenderFinishedSemaphore = m_syncObject->GetRenderFinishedSemaphore(),
-            .DrawFence = m_syncObject->GetDrawFence()
+            .CommandBuffer = m_commandBuffers->Get(m_frameIndex),
+            .PresentCompleteSemaphore = presentCompleteSemaphores,
+            .RenderFinishedSemaphore = renderFinishedSemaphore,
+            .DrawFence = fence
         };
         m_logicalDevice->Submit(queueSubmitBuilder);
-        
-        result = m_logicalDevice->WaitForFence(m_syncObject->GetDrawFence());
-
-        if (result != vk::Result::eSuccess)
-            throw std::runtime_error("[Vulkan][Draw] Failed to wait for fence");
 
         PresentKHRBuider presentKHRBuilder
         {
-            .RenderFinishedSemaphore = m_syncObject->GetRenderFinishedSemaphore(),
+            .RenderFinishedSemaphore = renderFinishedSemaphore,
             .SwapChain = m_swapChain->Get(),
             .ImageIndex = imageIndex
         };
@@ -202,5 +229,7 @@ namespace Renderer
 			default:
 				break;        // an unexpected result is returned!
 		}
+
+        m_frameIndex = (m_frameIndex + 1) % MAX_FRAMES_IN_FLIGHT;
     }
 }

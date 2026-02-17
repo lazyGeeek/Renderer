@@ -1,20 +1,26 @@
-#include "renderer/command_buffer.hpp"
+#include "renderer/command_buffers.hpp"
 
 namespace Renderer
 {
-    void CommandBuffer::Create(const CommandBufferBuilder& builder)
+    void CommandBuffers::Create(const CommandBuffersBuilder& builder)
     {
+        m_commandBuffers.clear();
+
         vk::CommandBufferAllocateInfo allocInfo { };
         allocInfo.commandPool = builder.CommandPool;
         allocInfo.level = vk::CommandBufferLevel::ePrimary;
-        allocInfo.commandBufferCount = 1;
+        allocInfo.commandBufferCount = builder.BuffersCount;
 
-        m_commandBuffer = std::move(vk::raii::CommandBuffers(builder.Device, allocInfo).front());
+        m_commandBuffers = vk::raii::CommandBuffers(builder.Device, allocInfo);
     }
 
-    void CommandBuffer::RecordCommandBuffer(const RecordCommandBufferBuilder& builder)
+    void CommandBuffers::RecordCommandBuffer(const RecordCommandBufferBuilder& builder)
     {
-        m_commandBuffer.begin({ });
+        if (builder.FrameIndex >= m_commandBuffers.size())
+            throw std::runtime_error("[Command Buffers][RecordCommandBuffer] Incorrect frame index");
+
+        const vk::raii::CommandBuffer& commandBuffer = m_commandBuffers[builder.FrameIndex];
+        commandBuffer.begin({ });
 
         ImageLayoutBuilder imageLayoutBuilder
         {
@@ -24,7 +30,8 @@ namespace Renderer
             .DstAccessMask = vk::AccessFlagBits2::eColorAttachmentWrite, // dstAccessMask
             .SrcStageMask = vk::PipelineStageFlagBits2::eColorAttachmentOutput, // srcStage
             .DstStageMask = vk::PipelineStageFlagBits2::eColorAttachmentOutput, // dstStage
-            .Image = builder.Image
+            .Image = builder.Image,
+            .FrameIndex = builder.FrameIndex
         };
 
         // Before starting rendering, transition the swapchain image to COLOR_ATTACHMENT_OPTIMAL
@@ -51,19 +58,19 @@ namespace Renderer
         renderingInfo.colorAttachmentCount = 1;
         renderingInfo.pColorAttachments = &attachmentInfo;
 
-        m_commandBuffer.beginRendering(renderingInfo);
+        commandBuffer.beginRendering(renderingInfo);
 
-        m_commandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, builder.GraphicsPipeline);
+        commandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, builder.GraphicsPipeline);
 
-        m_commandBuffer.setViewport(
+        commandBuffer.setViewport(
             0, vk::Viewport(0.0f, 0.0f,
             static_cast<float>(swapChainExtent.width),
             static_cast<float>(swapChainExtent.height),
             0.0f, 1.0f));
 
-        m_commandBuffer.setScissor(0, vk::Rect2D(vk::Offset2D(0, 0), swapChainExtent));
-        m_commandBuffer.draw(3, 1, 0, 0);
-        m_commandBuffer.endRendering();
+        commandBuffer.setScissor(0, vk::Rect2D(vk::Offset2D(0, 0), swapChainExtent));
+        commandBuffer.draw(3, 1, 0, 0);
+        commandBuffer.endRendering();
 
         imageLayoutBuilder =
         {         
@@ -73,22 +80,37 @@ namespace Renderer
             .DstAccessMask = {},                                                    // dstAccessMask
             .SrcStageMask = vk::PipelineStageFlagBits2::eColorAttachmentOutput,     // srcStage
             .DstStageMask = vk::PipelineStageFlagBits2::eBottomOfPipe,              // dstStage
-            .Image = builder.Image
+            .Image = builder.Image,
+            .FrameIndex = builder.FrameIndex
         };
 
         // After rendering, transition the swapchain image to PRESENT_SRC
         transitionImageLayout(imageLayoutBuilder);
 
-        m_commandBuffer.end();
+        commandBuffer.end();
     }
 
-    const vk::raii::CommandBuffer& CommandBuffer::Get() const
+    const vk::raii::CommandBuffer& CommandBuffers::Get(uint32_t frameIndex) const
     {
-        return m_commandBuffer;
+        if (frameIndex >= m_commandBuffers.size())
+            throw std::runtime_error("[Command Buffers][RecordCommandBuffer] Incorrect frame index");
+        
+            return m_commandBuffers[frameIndex];
     }
 
-    void CommandBuffer::transitionImageLayout(const ImageLayoutBuilder& imageLayoutBuilder)
+    void CommandBuffers::Reset(uint32_t frameIndex) const
     {
+        if (frameIndex >= m_commandBuffers.size())
+            throw std::runtime_error("[Command Buffers][RecordCommandBuffer] Incorrect frame index");
+        
+        m_commandBuffers[frameIndex].reset();
+    }
+
+    void CommandBuffers::transitionImageLayout(const ImageLayoutBuilder& imageLayoutBuilder)
+    {
+        if (imageLayoutBuilder.FrameIndex >= m_commandBuffers.size())
+            return;
+        
         vk::ImageMemoryBarrier2 barrier { };
         barrier.srcStageMask = imageLayoutBuilder.SrcStageMask;
         barrier.srcAccessMask = imageLayoutBuilder.SrcAccessMask;
@@ -113,6 +135,6 @@ namespace Renderer
         dependencyInfo.dependencyFlags = { };
         dependencyInfo.imageMemoryBarrierCount = 1;
         dependencyInfo.pImageMemoryBarriers = &barrier;
-        m_commandBuffer.pipelineBarrier2(dependencyInfo);
+        m_commandBuffers[imageLayoutBuilder.FrameIndex].pipelineBarrier2(dependencyInfo);
     }
 }

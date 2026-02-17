@@ -83,6 +83,11 @@ namespace Renderer
         return m_imageViews[imageIndex];
     }
 
+    size_t SwapChain::GetImagesCount() const
+    {
+        return m_images.size();
+    }
+
     vk::ResultValue<uint32_t> SwapChain::AcquireNextImage(const vk::raii::Semaphore& presentCompleteSemaphore) const
     {
         return m_swapChain.acquireNextImage(UINT64_MAX, *presentCompleteSemaphore, nullptr);
